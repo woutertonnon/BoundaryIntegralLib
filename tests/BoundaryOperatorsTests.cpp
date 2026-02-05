@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "BoundaryOperators.h"
+#include "BoundaryOperators.hpp"
 #include "mfem.hpp"
 #include <iomanip>
 

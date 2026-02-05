@@ -3,9 +3,6 @@
 
 #include <mfem.hpp>
 
-
-
-
 class NormalJumpIntegrator : public mfem::BilinearFormIntegrator
 {
 private:
