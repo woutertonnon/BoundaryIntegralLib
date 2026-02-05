@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 2.9)
 project(MEHCscheme)
 
+set(MFEM_USE_SUITESPARSE YES CACHE BOOL "" FORCE)
+set(MFEM_USE_LAPACK YES CACHE BOOL "" FORCE)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 #find_package(Git QUIET)
 #FIND_PACKAGE(Boost COMPONENTS program_options filesystem REQUIRED)

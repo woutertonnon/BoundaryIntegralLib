@@ -1,0 +1,2 @@
+/usr/bin/ar qc libstokesoperator.a CMakeFiles/stokesoperator.dir/StokesOperator.cpp.o
+/usr/bin/ranlib libstokesoperator.a

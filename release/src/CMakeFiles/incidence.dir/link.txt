@@ -1,0 +1,2 @@
+/usr/bin/ar qc libincidence.a CMakeFiles/incidence.dir/incidence.cpp.o
+/usr/bin/ranlib libincidence.a
