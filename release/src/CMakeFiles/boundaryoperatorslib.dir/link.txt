@@ -1,2 +1,0 @@
-/usr/bin/ar qc libboundaryoperatorslib.a CMakeFiles/boundaryoperatorslib.dir/BoundaryOperators.cpp.o
-/usr/bin/ranlib libboundaryoperatorslib.a

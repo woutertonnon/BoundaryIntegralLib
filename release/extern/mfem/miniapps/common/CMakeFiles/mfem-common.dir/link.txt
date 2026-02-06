@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmfem-common.a "CMakeFiles/mfem-common.dir/mesh_extras.cpp.o" "CMakeFiles/mfem-common.dir/fem_extras.cpp.o" "CMakeFiles/mfem-common.dir/particles_extras.cpp.o"
-/usr/bin/ranlib libmfem-common.a

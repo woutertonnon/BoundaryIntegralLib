@@ -32,6 +32,8 @@
 *.app
 
 **/build
+**/release
+**/debug
 **/target
 /target/
 

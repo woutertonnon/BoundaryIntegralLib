@@ -47,11 +47,6 @@ void StokesNitscheOperator::initIncidence()
     d1 = std::move(
         assembleFaceEdge(mesh_, dim)
     );
-
-    if(dim == 3)
-        d2 = std::move(
-            assembleElementFace(mesh_)
-        );
 }
 
 void StokesNitscheOperator::initMass()
@@ -96,7 +91,7 @@ void StokesNitscheOperator::initLumpedMass()
             mass_hdiv_or_l2_->AssembleDiagonal(mass_hdiv_or_l2_lumped_);
             break;
         case BARYCENTRIC:
-            throw std::logic_error("BARYCENTRIC mass lumping not not implemented (yet)");
+            throw std::logic_error("BARYCENTRIC mass lumping not implemented (yet)");
             break;
         default:
             throw std::logic_error("Unknown mass lumping in StokesNitscheOperator");
@@ -157,7 +152,7 @@ StokesNitscheOperator::getFullGalerkinSystem()
     const int nv = mesh_.GetNV();
     const int ne = mesh_.GetNEdges();
 
-    const mfem::Array<int> offsets({0, ne, ne + nv});
+    const mfem::Array<int> offsets({0, ne, ne + nv, ne + nv + 1});
     mfem::BlockMatrix block(offsets);
 
     std::unique_ptr<mfem::SparseMatrix> curlcurl, grad, gradT;
@@ -180,28 +175,65 @@ StokesNitscheOperator::getFullGalerkinSystem()
     );
 
     {
-        std::unique_ptr<mfem::BilinearForm> cc =
-            std::make_unique<mfem::BilinearForm>(
-                hcurl_.get()
-            );
-        cc->AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
+        auto tmp = std::unique_ptr<mfem::SparseMatrix>(
+            mfem::Mult(mass_hdiv_or_l2_->SpMat(), d1)
+        );
 
-        // DEBUG
-        cc->AddBdrFaceIntegrator(new WouterIntegrator(1.0, 100.0));
+        auto d1T = std::unique_ptr<mfem::SparseMatrix>(
+            mfem::Transpose(d1)
+        );
+        auto product = std::unique_ptr<mfem::SparseMatrix>(
+            mfem::Mult(*d1T, *tmp)
+        );
 
-        cc->Assemble(); cc->Finalize();
+        curlcurl = std::unique_ptr<mfem::SparseMatrix>(
+            mfem::Add(*product, nitsche_->SpMat())
+        );
+        // For some reason, gives something different (???)
 
+        // std::unique_ptr<mfem::BilinearForm> cc =
+        //     std::make_unique<mfem::BilinearForm>(
+        //         hcurl_.get()
+        //     );
+        // cc->AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
+        //
+        // // DEBUG
+        // // cc->AddBdrFaceIntegrator(new WouterIntegrator(-1.0, 10.0));
+        //
+        // cc->Assemble(); cc->Finalize();
+        //
         // curlcurl = std::unique_ptr<mfem::SparseMatrix>(
         //     mfem::Add(cc->SpMat(), nitsche_->SpMat())
         // );
-        curlcurl = std::unique_ptr<mfem::SparseMatrix>(
-            cc->LoseMat()
-        );
+        //
+        // // curlcurl = std::unique_ptr<mfem::SparseMatrix>(
+        //     // cc->LoseMat()
+        // // );
     }
+
+    mfem::Array<int> cols(nv);
+    for(unsigned int k = 0; k < nv; ++k)
+        cols[k] = k;
+
+    mfem::SparseMatrix mean(1, nv);
+
+    mfem::Vector ones(nv),
+                 mass_x_ones(nv);
+    ones = 1.;
+    mass_h1_->Mult(ones, mass_x_ones);
+
+    mean.AddRow(0, cols, mass_x_ones);
+    mean.Finalize();
+
+    auto meanT = std::unique_ptr<mfem::SparseMatrix>(
+        mfem::Transpose(mean)
+    );
 
     block.SetBlock(0, 0, curlcurl.get());
     block.SetBlock(0, 1, grad.get());
     block.SetBlock(1, 0, gradT.get());
+    block.SetBlock(2, 1, &mean);
+    block.SetBlock(1, 2, meanT.get());
 
     return std::unique_ptr<mfem::SparseMatrix>(block.CreateMonolithic());
 }
@@ -212,16 +244,15 @@ StokesNitscheOperator::getFullDECSystem()
     const int nv = mesh_.GetNV();
     const int ne = mesh_.GetNEdges();
 
-    const mfem::Array<int> offsets({0, ne, ne + nv});
+    const mfem::Array<int> offsets({0, ne, ne + nv, ne + nv + 1});
     mfem::BlockMatrix block(offsets);
 
     std::unique_ptr<mfem::SparseMatrix> curlcurl, grad, gradT;
 
     grad = std::make_unique<mfem::SparseMatrix>(d0);
 
-    mfem::Vector inv_mass_h1_lumped_(mass_h1_lumped_.Size());
-    inv_mass_h1_lumped_ = 1.;
-    inv_mass_h1_lumped_ /= mass_h1_lumped_;
+    mfem::Vector inv_mass_h1_lumped_(mass_h1_lumped_);
+    inv_mass_h1_lumped_.Reciprocal();
 
     gradT = std::unique_ptr<mfem::SparseMatrix>(
         mfem::Transpose(*grad)
@@ -229,9 +260,8 @@ StokesNitscheOperator::getFullDECSystem()
     gradT->ScaleRows(inv_mass_h1_lumped_);
     gradT->ScaleColumns(mass_hcurl_lumped_);
 
-    mfem::Vector inv_mass_hcurl_lumped_(mass_hcurl_lumped_.Size());
-    inv_mass_hcurl_lumped_ = 1.;
-    inv_mass_hcurl_lumped_ /= mass_hcurl_lumped_;
+    mfem::Vector inv_mass_hcurl_lumped_(mass_hcurl_lumped_);
+    inv_mass_hcurl_lumped_.Reciprocal();
 
     {
         auto tmp = std::make_unique<mfem::SparseMatrix>(d1);
@@ -251,9 +281,23 @@ StokesNitscheOperator::getFullDECSystem()
         curlcurl->ScaleRows(inv_mass_hcurl_lumped_);
     }
 
+    mfem::Array<int> cols(nv);
+    for(unsigned int k = 0; k < nv; ++k)
+        cols[k] = k;
+
+    mfem::SparseMatrix mean(1, nv);
+    mean.AddRow(0, cols, mass_h1_lumped_);
+    mean.Finalize();
+
+    auto meanT = std::unique_ptr<mfem::SparseMatrix>(
+        mfem::Transpose(mean)
+    );
+
     block.SetBlock(0, 0, curlcurl.get());
     block.SetBlock(0, 1, grad.get());
     block.SetBlock(1, 0, gradT.get());
+    block.SetBlock(2, 1, &mean);
+    block.SetBlock(1, 2, meanT.get());
 
     return std::unique_ptr<mfem::SparseMatrix>(block.CreateMonolithic());
 }
@@ -277,12 +321,14 @@ const mfem::SparseMatrix& StokesNitscheOperator::getD1() const
     return d1;
 }
 
-const mfem::SparseMatrix& StokesNitscheOperator::getD2() const
+mfem::SparseMatrix& StokesNitscheOperator::getD0()
 {
-    if(mesh_.Dimension() == 2)
-        throw std::runtime_error("Accessing undefined incidence matrix!");
+    return d0;
+}
 
-    return d2;
+mfem::SparseMatrix& StokesNitscheOperator::getD1()
+{
+    return d1;
 }
 
 const mfem::BilinearForm& StokesNitscheOperator::getMassH1() const
@@ -300,6 +346,11 @@ const mfem::BilinearForm& StokesNitscheOperator::getMassHDivOrL2() const
     return *mass_hdiv_or_l2_;
 }
 
+const mfem::BilinearForm& StokesNitscheOperator::getNitsche() const
+{
+    return *nitsche_;
+}
+
 const mfem::Vector& StokesNitscheOperator::getMassH1Lumped() const
 {
     return mass_h1_lumped_;
@@ -313,6 +364,11 @@ const mfem::Vector& StokesNitscheOperator::getMassHCurlLumped() const
 const mfem::Vector& StokesNitscheOperator::getMassHDivOrL2Lumped() const
 {
     return mass_hdiv_or_l2_lumped_;
+}
+
+const mfem::Mesh& StokesNitscheOperator::getMesh() const
+{
+    return mesh_;
 }
 
 void StokesNitscheOperator::Mult(const mfem::Vector& x,
@@ -330,6 +386,11 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x,
     const int nv = mesh_.GetNV();
     const int ne = mesh_.GetNEdges();
 
+    assert(
+        x.Size() == nv + ne &&
+        y.Size() == nv + ne
+    );
+
     const mfem::Vector x_u(x.GetData(), ne);
     const mfem::Vector x_p(x.GetData() + ne, nv);
 
@@ -342,6 +403,7 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x,
     d1.Mult(x_u, tmp_du);
     tmp_du *= mass_hdiv_or_l2_lumped_;
     d1.MultTranspose(tmp_du, y_u);
+    nitsche_->AddMult(x_u, y_u);
     y_u /= mass_hcurl_lumped_;
 
     d0.AddMult(x_p, y_u);
@@ -350,8 +412,6 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x,
     tmp_u *= mass_hcurl_lumped_;
     d0.MultTranspose(tmp_u, y_p);
     y_p /= mass_h1_lumped_;
-
-    nitsche_->AddMult(x_u, y_u);
 }
 
 void StokesNitscheOperator::MultGalerkin(const mfem::Vector& x,
@@ -368,8 +428,8 @@ void StokesNitscheOperator::MultGalerkin(const mfem::Vector& x,
     const mfem::Vector x_u(x.GetData(), ne);
     const mfem::Vector x_p(x.GetData() + ne, nv);
 
-    mfem::Vector y_u(y.GetData(), ne);
-    mfem::Vector y_p(y.GetData() + ne, nv);
+    mfem::Vector y_u(y, 0, ne);
+    mfem::Vector y_p(y, ne, nv);
 
     mfem::Vector tmp_u(y_u.Size()),
                  tmp_du(hdiv_or_l2_->GetNDofs()),
