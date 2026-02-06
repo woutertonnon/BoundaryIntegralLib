@@ -1,8 +1,6 @@
 #include "BoundaryOperators.hpp"
 #include "mfem.hpp"
 
-
-
 void WouterIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
                                              mfem::DenseMatrix &elmat)
 {

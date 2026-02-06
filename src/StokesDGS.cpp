@@ -39,8 +39,6 @@ void StokesNitscheDGS::initTransformedSystem()
     mfem::Vector inv_mass_hcurl_lumped_ = op_.getMassHCurlLumped();
     inv_mass_hcurl_lumped_.Reciprocal();
 
-    std::unique_ptr<mfem::SparseMatrix> curlcurl;
-
     bd_ = std::unique_ptr<mfem::SparseMatrix>(
         mfem::Mult(op_.getNitsche().SpMat(), op_.getD0())
     );
@@ -83,7 +81,7 @@ void StokesNitscheDGS::computeResidual(const mfem::Vector& x,
     op_.AddMult(y, residual_, -1.0);
 }
 
-void StokesNitscheDGS::computeCorrection() const
+void StokesNitscheDGS::computeCorrection(const SmootherType st) const
 {
     const mfem::Mesh& mesh = op_.getMesh();
     const int nv = mesh.GetNV(),
@@ -96,18 +94,23 @@ void StokesNitscheDGS::computeCorrection() const
     mfem::Vector corr_p(corr_.GetData() + ne, nv);
 
     assert(corr_.CheckFinite() == 0);
-    switch(st_)
+    switch(st)
     {
-        case GAUSS_SEIDEL:
+        case GAUSS_SEIDEL_FORW:
             Lu_->Gauss_Seidel_forw(r_u, corr_u);
             grad_adj_->AddMult(corr_u, r_p, -1.0);
             Lp_->Gauss_Seidel_forw(r_p, corr_p);
             break;
-        case JACOBI:
-            Lu_->DiagScale(r_u, corr_u);
-            grad_adj_->AddMult(corr_u, r_p, -1.0);
-            Lp_->DiagScale(r_p, corr_p);
+        case GAUSS_SEIDEL_BACK:
+            Lp_->Gauss_Seidel_back(r_p, corr_p);
+            bd_->AddMult(corr_p, r_u, -1.0);
+            Lu_->Gauss_Seidel_back(r_u, corr_u);
             break;
+        // case JACOBI:
+        //     Lu_->DiagScale(r_u, corr_u);
+        //     grad_adj_->AddMult(corr_u, r_p, -1.0);
+        //     Lp_->DiagScale(r_p, corr_p);
+        //     break;
         default:
             MFEM_ABORT("StokesNitscheDGS::computeCorrection: unknown smoother");
             break;
@@ -143,7 +146,7 @@ void StokesNitscheDGS::Mult(const mfem::Vector& x,
 {
     assert(op_.getOperatorMode() == DEC);
     computeResidual(x, y);
-    computeCorrection();
+    computeCorrection(st_);
     distributeCorrection(y);
 }
 

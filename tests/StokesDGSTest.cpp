@@ -66,15 +66,15 @@ TEST(StokesOperatorTest, Convergence)
         op.AddMult(sol_dgs, residual_dgs, -1.0);
         ASSERT_EQ(residual_dgs.CheckFinite(), 0);
 
-        dgs.Mult(rhs, sol_dgs);
-        ASSERT_EQ(sol_dgs.CheckFinite(), 0);
-
         err = residual_dgs.Norml2() / rhs.Norml2();
 
-        if(!(iter % 100) || !(err > tol))
+        // if(!(iter % 100) || !(err > tol))
             std::cout << iter << " Relative residual: "
                     << err
                     << std::endl;
+
+        dgs.Mult(rhs, sol_dgs);
+        ASSERT_EQ(sol_dgs.CheckFinite(), 0);
     }
 
     ASSERT_LT(iter, maxit);

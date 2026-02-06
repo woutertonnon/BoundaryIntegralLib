@@ -14,7 +14,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 #INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 #find_package(MFEM REQUIRED)
 # Use the bundled extern/mfem headers/build instead of an external ../mfem/build
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/extern/mfem" "${PROJECT_SOURCE_DIR}/include" "/usr/include/suitesparse")
+include_directories("${CMAKE_BINARY_DIR}/extern/mfem" "${PROJECT_SOURCE_DIR}/include" "/usr/include/suitesparse")
 link_directories("${CMAKE_BINARY_DIR}/src")
 
 

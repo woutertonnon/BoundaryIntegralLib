@@ -5,8 +5,8 @@ add_library(stokesoperator StokesOperator.cpp)
 add_library(stokesdgs StokesDGS.cpp)
 
 # We need this directory, and users of our library will need it too
-target_include_directories(boundaryoperatorslib PUBLIC ../include ${CMAKE_CURRENT_SOURCE_DIR}/extern/mfem)
-target_link_directories(boundaryoperatorslib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/extern/mfem)
+target_include_directories(boundaryoperatorslib PUBLIC ../include ${CMAKE_BINARY_DIR}/extern/mfem)
+target_link_directories(boundaryoperatorslib PRIVATE ${CMAKE_BINARY_DIR}/extern/mfem)
 
 target_link_libraries(incidence PRIVATE mfem)
 target_link_libraries(stokesoperator PRIVATE mfem incidence boundaryoperatorslib)
