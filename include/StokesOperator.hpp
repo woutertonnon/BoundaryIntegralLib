@@ -70,6 +70,8 @@ public:
     const mfem::Vector& getMassHDivOrL2Lumped() const;
     const mfem::Mesh& getMesh() const;
 
+    void eliminateConstants(mfem::Vector& x) const;
+
     void Mult(const mfem::Vector& x,
                     mfem::Vector& y) const override;
     void MultDEC(const mfem::Vector& x,

@@ -175,40 +175,47 @@ StokesNitscheOperator::getFullGalerkinSystem()
     );
 
     {
-        auto tmp = std::unique_ptr<mfem::SparseMatrix>(
-            mfem::Mult(mass_hdiv_or_l2_->SpMat(), d1)
-        );
+        // auto tmp = std::unique_ptr<mfem::SparseMatrix>(
+        //     mfem::Mult(mass_hdiv_or_l2_->SpMat(), d1)
+        // );
 
-        auto d1T = std::unique_ptr<mfem::SparseMatrix>(
-            mfem::Transpose(d1)
-        );
-        auto product = std::unique_ptr<mfem::SparseMatrix>(
-            mfem::Mult(*d1T, *tmp)
-        );
+        // auto d1T = std::unique_ptr<mfem::SparseMatrix>(
+        //     mfem::Transpose(d1)
+        // );
+        // auto product = std::unique_ptr<mfem::SparseMatrix>(
+        //     mfem::Mult(*d1T, *tmp)
+        // );
 
-        curlcurl = std::unique_ptr<mfem::SparseMatrix>(
-            mfem::Add(*product, nitsche_->SpMat())
-        );
+        // curlcurl = std::unique_ptr<mfem::SparseMatrix>(
+        //     mfem::Add(*product, nitsche_->SpMat())
+        // );
         // For some reason, gives something different (???)
 
-        // std::unique_ptr<mfem::BilinearForm> cc =
-        //     std::make_unique<mfem::BilinearForm>(
-        //         hcurl_.get()
-        //     );
+        std::unique_ptr<mfem::BilinearForm> cc =
+            std::make_unique<mfem::BilinearForm>(
+                hcurl_.get()
+            );
+
+        auto* curl_integ = new mfem::CurlCurlIntegrator(one);
+        const int ir_order = 10;
+        const mfem::IntegrationRule &ir = mfem::IntRules.Get(mfem::Geometry::TETRAHEDRON, ir_order);
+        curl_integ->SetIntRule(&ir);
+        cc->AddDomainIntegrator(curl_integ);
+
         // cc->AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
-        //
-        // // DEBUG
-        // // cc->AddBdrFaceIntegrator(new WouterIntegrator(-1.0, 10.0));
-        //
-        // cc->Assemble(); cc->Finalize();
-        //
+        
+        // DEBUG
+        // cc->AddBdrFaceIntegrator(new WouterIntegrator(-1.0, 10.0));
+        
+        cc->Assemble(); cc->Finalize();
+        
+        curlcurl = std::unique_ptr<mfem::SparseMatrix>(
+            mfem::Add(cc->SpMat(), nitsche_->SpMat())
+        );
+        
         // curlcurl = std::unique_ptr<mfem::SparseMatrix>(
-        //     mfem::Add(cc->SpMat(), nitsche_->SpMat())
+            // cc->LoseMat()
         // );
-        //
-        // // curlcurl = std::unique_ptr<mfem::SparseMatrix>(
-        //     // cc->LoseMat()
-        // // );
     }
 
     mfem::Array<int> cols(nv);
@@ -369,6 +376,40 @@ const mfem::Vector& StokesNitscheOperator::getMassHDivOrL2Lumped() const
 const mfem::Mesh& StokesNitscheOperator::getMesh() const
 {
     return mesh_;
+}
+
+void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
+{
+    assert(x.Size() == this->NumCols());
+
+    const int nv = mesh_.GetNV(),
+              ne = mesh_.GetNEdges();
+
+    mfem::Vector ones(nv);
+    ones = 1.0;
+
+    mfem::Vector x_p(x, ne, nv);
+
+    double proj = 0;
+
+    if(opmode_ == GALERKIN)
+        proj = mass_h1_->InnerProduct(ones, x_p) /
+               mass_h1_->InnerProduct(ones, ones);
+    else
+    {
+        MFEM_ASSERT(
+            ml_ != NO_MASS_LUMPING, 
+            "StokesNitscheOperator::eliminateConstants: Need mass lumping in opmode DEC"
+        );
+
+        mfem::Vector tmp(x_p);
+        tmp *= mass_h1_lumped_;
+
+        proj = (tmp * ones) / (mass_h1_lumped_ * ones);
+    }
+
+    ones *= proj;
+    x_p -= ones;
 }
 
 void StokesNitscheOperator::Mult(const mfem::Vector& x,

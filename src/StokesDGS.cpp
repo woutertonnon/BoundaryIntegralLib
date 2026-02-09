@@ -18,7 +18,7 @@ void StokesNitscheDGS::initTransformation()
     );
 
     mfem::Vector inv_mass_hcurl_lumped_ = op_.getMassHCurlLumped();
-    mfem::Vector inv_mass_h1_lumped_ = op_.getMassH1Lumped();
+    mfem::Vector inv_mass_h1_lumped_    = op_.getMassH1Lumped();
     inv_mass_hcurl_lumped_.Reciprocal();
     inv_mass_h1_lumped_.Reciprocal();
 
@@ -75,7 +75,7 @@ void StokesNitscheDGS::initTransformedSystem()
 }
 
 void StokesNitscheDGS::computeResidual(const mfem::Vector& x,
-                                             mfem::Vector& y) const
+                                       const mfem::Vector& y) const
 {
     residual_ = x;
     op_.AddMult(y, residual_, -1.0);
@@ -87,11 +87,11 @@ void StokesNitscheDGS::computeCorrection(const SmootherType st) const
     const int nv = mesh.GetNV(),
               ne = mesh.GetNEdges();
 
-    mfem::Vector r_u(residual_.GetData(), ne);
-    mfem::Vector r_p(residual_.GetData() + ne, nv);
+    mfem::Vector r_u(residual_, 0, ne);
+    mfem::Vector r_p(residual_, ne, nv);
 
-    mfem::Vector corr_u(corr_.GetData(), ne);
-    mfem::Vector corr_p(corr_.GetData() + ne, nv);
+    mfem::Vector corr_u(corr_, 0, ne);
+    mfem::Vector corr_p(corr_, ne, nv);
 
     assert(corr_.CheckFinite() == 0);
     switch(st)
@@ -139,6 +139,13 @@ StokesNitscheDGS::StokesNitscheDGS(StokesNitscheOperator& op,
 
     initTransformation();
     initTransformedSystem();
+}
+
+const double StokesNitscheDGS::computeResidualNorm(const mfem::Vector& x,
+                                                   const mfem::Vector& y) const
+{
+    computeResidual(x, y);
+    return residual_.Norml2();
 }
 
 void StokesNitscheDGS::Mult(const mfem::Vector& x,

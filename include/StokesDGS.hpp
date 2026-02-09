@@ -30,12 +30,15 @@ private:
     void initTransformation();
     void initTransformedSystem();
     void computeResidual(const mfem::Vector& x,
-                               mfem::Vector& y) const;
+                         const mfem::Vector& y) const;
     void computeCorrection(const SmootherType st) const;
     void distributeCorrection(mfem::Vector& y) const;
 public:
     StokesNitscheDGS(StokesNitscheOperator& op,
                      const SmootherType type = GAUSS_SEIDEL_FORW);
+
+    const double computeResidualNorm(const mfem::Vector& x,
+                                     const mfem::Vector& y) const;
 
     void Mult(const mfem::Vector& x,
                     mfem::Vector& y) const override;
