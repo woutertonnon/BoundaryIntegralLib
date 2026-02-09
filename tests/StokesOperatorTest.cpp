@@ -69,7 +69,7 @@ TEST(StokesOperatorTest, OperatorGalerkin)
     const unsigned int n = 5;
     const double theta = 1.0,
                  penalty = 3.0,
-                 factor = 1.0;
+                 factor = 0.0;
 
     mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
         n, n, n, mfem::Element::TETRAHEDRON

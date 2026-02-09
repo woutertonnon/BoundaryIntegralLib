@@ -65,14 +65,14 @@ TEST(StokesDGSTest, ResidualComputation)
 
 TEST(StokesDGSTest, Convergence)
 {
-    const unsigned int n = 5;
+    const unsigned int n = 8;
     const double theta = 1.0,
-                 penalty = 3.0,
-                 factor = 0.0;
+                 penalty = 10.0,
+                 factor = 1.0;
     const double tol = 1e-12;
 
     const mfem::Element::Type el_type = 
-        mfem::Element::HEXAHEDRON;
+        mfem::Element::TETRAHEDRON;
 
     mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
         n, n, n, el_type
@@ -136,7 +136,7 @@ TEST(StokesDGSTest, Convergence)
 
         err = residual_dgs.Norml2() / rhs.Norml2();
 
-        // if(!(iter % 100) || !(err > tol))
+        if(!(iter % 100) || !(err > tol))
             std::cout << iter << " Relative residual: "
                     << err
                     << std::endl;

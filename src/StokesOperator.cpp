@@ -62,13 +62,14 @@ void StokesNitscheOperator::initMass()
     );
 
     mfem::ConstantCoefficient one(1.0);
+    mfem::ConstantCoefficient four(4.0);
 
     mass_h1_->AddDomainIntegrator(new mfem::MassIntegrator(one));
     mass_hcurl_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(one));
     if(mesh_.Dimension() == 2)
-        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::MassIntegrator(one));
+        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::MassIntegrator(four));
     else // 3
-        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(one));
+        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(four));
 
     mass_h1_->Assemble(); mass_h1_->Finalize();
     mass_hcurl_->Assemble(); mass_hcurl_->Finalize();
@@ -196,26 +197,19 @@ StokesNitscheOperator::getFullGalerkinSystem()
                 hcurl_.get()
             );
 
-        auto* curl_integ = new mfem::CurlCurlIntegrator(one);
-        const int ir_order = 10;
-        const mfem::IntegrationRule &ir = mfem::IntRules.Get(mfem::Geometry::TETRAHEDRON, ir_order);
-        curl_integ->SetIntRule(&ir);
-        cc->AddDomainIntegrator(curl_integ);
+        // auto* curl_integ = new mfem::CurlCurlIntegrator(one);
+        // const int ir_order = 10;
+        // const mfem::IntegrationRule &ir = mfem::IntRules.Get(mfem::Geometry::TETRAHEDRON, ir_order);
+        // curl_integ->SetIntRule(&ir);
+        // cc->AddDomainIntegrator(curl_integ);
 
-        // cc->AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
-        
-        // DEBUG
-        // cc->AddBdrFaceIntegrator(new WouterIntegrator(-1.0, 10.0));
-        
+        cc->AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
+
         cc->Assemble(); cc->Finalize();
-        
+
         curlcurl = std::unique_ptr<mfem::SparseMatrix>(
             mfem::Add(cc->SpMat(), nitsche_->SpMat())
         );
-        
-        // curlcurl = std::unique_ptr<mfem::SparseMatrix>(
-            // cc->LoseMat()
-        // );
     }
 
     mfem::Array<int> cols(nv);

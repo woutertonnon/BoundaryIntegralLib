@@ -28,7 +28,8 @@ mfem::SparseMatrix assembleVertexEdge(const mfem::Mesh& mesh)
   return D;
 }
 
-mfem::SparseMatrix assembleFaceEdge(const mfem::Mesh& mesh, const int DIM)
+mfem::SparseMatrix assembleFaceEdge(const mfem::Mesh& mesh,
+                                    const int DIM)
 {
   int ne = mesh.GetNEdges(),
       nf = -1;
@@ -59,8 +60,8 @@ mfem::SparseMatrix assembleFaceEdge(const mfem::Mesh& mesh, const int DIM)
     else
       mesh.GetElementEdges(fi, edges, ori);
 
-    for(unsigned int k = 0; k < edges.Size(); ++k)
-      srow[k] = static_cast<double>(ori[k]);
+    for(unsigned int k = 0; k < num_edges; ++k)
+      srow(k) = static_cast<double>(ori[k]);
     // Add to matrix
     D.AddRow(fi, edges, srow);
   }
