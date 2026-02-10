@@ -1,8 +1,6 @@
 #include "BoundaryOperators.h"
 #include "mfem.hpp"
 
-
-
 void WouterIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
                                              mfem::DenseMatrix &elmat)
 {
@@ -23,6 +21,7 @@ void WouterIntegrator::AssembleFaceMatrix(
 
    // Build a reasonable quadrature on the actual face geometry
    const mfem::IntegrationRule *ir = IntRule;
+   //std::cout << "FaceGeom = " << static_cast<mfem::Geometry::Type>(Trans.FaceGeom) << std::endl;
    ir = &mfem::IntRules.Get(static_cast<mfem::Geometry::Type>(Trans.FaceGeom),
                             2*el1.GetOrder()+1);
 
@@ -42,9 +41,12 @@ void WouterIntegrator::AssembleFaceMatrix(
       // Face normal atu this quadrature point
       Trans.Face->SetIntPoint(&ip_face);
       mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
-      double h = sqrt(normal.Norml2());
+      //std::cout << "normal: " << std::endl;
+      //normal.Print(std::cout);
       double area = normal.Norml2();
+      double h = sqrt(normal.Norml2());
 
+      //std::cout << "h = " << h << std::endl;
       mfem::DenseMatrix shape(el1.GetDof(), Trans.GetSpaceDim());
       mfem::DenseMatrix curl_shape(el1.GetDof(), 3);
 
@@ -63,7 +65,7 @@ void WouterIntegrator::AssembleFaceMatrix(
             mfem::Vector u(dim), v(dim);
             shape.GetRow(k, u);
             shape.GetRow(l, v);
-	    
+
             // Extract curl(u) and curl(v)
             mfem::Vector curl_u(dim), curl_v(dim);
             curl_shape.GetRow(k, curl_u);
@@ -77,7 +79,7 @@ void WouterIntegrator::AssembleFaceMatrix(
 
             elmat.Elem(l,k) += factor_ * weights[i] * (n_x_curl_u * v);
             elmat.Elem(l,k) += factor_ * theta_ * weights[i] * (u * n_x_curl_v);
-            elmat.Elem(l,k) += factor_ * Cw_/(h*h*h) * weights[i]* (n_x_u * n_x_v);
+            elmat.Elem(l,k) += factor_ * Cw_/(h*area) * weights[i]* (n_x_u * n_x_v); // ||n|| ~ area and n appears twice here
 
          } 
    }
@@ -100,7 +102,7 @@ void WouterLFIntegrator::AssembleRHSElementVect(
    // Build a reasonable quadrature on the actual face geometry
    const mfem::IntegrationRule *ir = IntRule;
    ir = &mfem::IntRules.Get(static_cast<mfem::Geometry::Type>(Tr.FaceGeom),
-                            2*el.GetOrder()+12);
+                            2*el.GetOrder()+1);
 
    elvect.SetSize(el.GetDof());
    elvect = 0.;
@@ -148,7 +150,6 @@ void WouterLFIntegrator::AssembleRHSElementVect(
 
          elvect.Elem(k) += factor_ * theta_ * weights[i] * (u * n_x_curl_v);
          elvect.Elem(k) += factor_ * Cw_/(h*h*h) * weights[i]* (n_x_u * n_x_v);
-
       } 
    }
 
