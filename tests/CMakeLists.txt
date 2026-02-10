@@ -73,6 +73,7 @@ target_link_libraries(stokesdgs_tests
         pthread
 )
 
+add_test(NAME incidence_tests COMMAND incidence_tests)
 add_test(NAME boundaryoperators_tests COMMAND boundaryoperators_tests)
 add_test(NAME stokesoperator_tests COMMAND stokesoperator_tests)
 add_test(NAME stokesdgs_tests COMMAND stokesdgs_tests)

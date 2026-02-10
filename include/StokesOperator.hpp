@@ -47,28 +47,31 @@ public:
                           const double& factor,
                           const MassLumping ml = DIAGONAL_OF_MASS);
 
-    const MassLumping getMassLumping() const;
-    const OperatorMode getOperatorMode() const;
+    const MassLumping getMassLumping() const {return ml_;}
+    const OperatorMode getOperatorMode() const {return opmode_;}
 
-    void setGalerkinMode();
-    void setDECMode();
+    void setGalerkinMode() {opmode_ = GALERKIN;}
+    void setDECMode() {opmode_ = DEC;}
+
+    const mfem::SparseMatrix& getD0() const {return d0;}
+    const mfem::SparseMatrix& getD1() const {return d1;}
+    mfem::SparseMatrix& getD0() {return d0;}
+    mfem::SparseMatrix& getD1() {return d1;}
+    const mfem::FiniteElementSpace& getH1() const {return *h1_;}
+    const mfem::FiniteElementSpace& getHCurl() const {return *hcurl_;}
+    const mfem::FiniteElementSpace& getHDivOrL2() const {return *hdiv_or_l2_;}
+    const mfem::BilinearForm& getMassH1() const {return *mass_h1_;}
+    const mfem::BilinearForm& getMassHCurl() const {return *mass_hcurl_;}
+    const mfem::BilinearForm& getMassHDivOrL2() const {return *mass_hdiv_or_l2_;}
+    const mfem::BilinearForm& getNitsche() const {return *nitsche_;}
+    const mfem::Vector& getMassH1Lumped() const {return mass_h1_lumped_;}
+    const mfem::Vector& getMassHCurlLumped() const {return mass_hcurl_lumped_;}
+    const mfem::Vector& getMassHDivOrL2Lumped() const {return mass_hdiv_or_l2_lumped_;}
+    const mfem::Mesh& getMesh() const {return mesh_;}
 
     std::unique_ptr<mfem::SparseMatrix> getFullGalerkinSystem();
     std::unique_ptr<mfem::SparseMatrix> getFullDECSystem();
     std::unique_ptr<mfem::SparseMatrix> getFullSystem();
-
-    const mfem::SparseMatrix& getD0() const;
-    const mfem::SparseMatrix& getD1() const;
-    mfem::SparseMatrix& getD0();
-    mfem::SparseMatrix& getD1();
-    const mfem::BilinearForm& getMassH1() const;
-    const mfem::BilinearForm& getMassHCurl() const;
-    const mfem::BilinearForm& getMassHDivOrL2() const;
-    const mfem::BilinearForm& getNitsche() const;
-    const mfem::Vector& getMassH1Lumped() const;
-    const mfem::Vector& getMassHCurlLumped() const;
-    const mfem::Vector& getMassHDivOrL2Lumped() const;
-    const mfem::Mesh& getMesh() const;
 
     void eliminateConstants(mfem::Vector& x) const;
 

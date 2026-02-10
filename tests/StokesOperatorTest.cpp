@@ -2,6 +2,61 @@
 #include "mfem.hpp"
 #include "StokesOperator.hpp"
 
+TEST(StokesOperatorTest, StaticCondensationDoesNothing)
+{
+    const unsigned int n = 4;
+    const double theta = 1.0,
+                 penalty = 3.0,
+                 factor = 1.0;
+
+    mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
+        n, n, n, mfem::Element::TETRAHEDRON
+    );
+
+    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+
+    const std::array<const mfem::FiniteElementSpace, 3>
+        fespaces({
+            op.getH1(), op.getHCurl(), op.getHDivOrL2()
+        });
+
+    for(const auto& fes: fespaces)
+    {
+        // Does not accept const mfem::FiniteElementSpace*
+        // But it is fine, we never use it again, so no UB (I hope)
+        auto static_condensation = mfem::StaticCondensation(
+            const_cast<mfem::FiniteElementSpace*>(&fes)
+        );
+
+        ASSERT_EQ(static_condensation.GetNPrDofs(), 0);
+        ASSERT_EQ(static_condensation.GetNExDofs(), fes.GetNDofs());
+        ASSERT_FALSE(static_condensation.ReducesTrueVSize());
+    }
+}
+
+TEST(StokesOperatorTest, NoLocalInteriorDOF)
+{
+    const unsigned int n = 4;
+    const double theta = 1.0,
+                 penalty = 3.0,
+                 factor = 1.0;
+
+    mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
+        n, n, n, mfem::Element::TETRAHEDRON
+    );
+
+    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+
+    const std::array<const mfem::FiniteElementSpace, 3>
+        fespaces({
+            op.getH1(), op.getHCurl(), op.getHDivOrL2()
+        });
+
+    for(const auto& fes: fespaces)
+        for(unsigned int k = 0; k < fes.GetNE(); ++k)
+            ASSERT_EQ(fes.GetNumElementInteriorDofs(k), 0);
+}
+
 TEST(StokesOperatorTest, MatrixRegularityGalerkin)
 {
     const unsigned int n = 4;

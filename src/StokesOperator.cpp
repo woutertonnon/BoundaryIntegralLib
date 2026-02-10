@@ -126,26 +126,6 @@ StokesNitscheOperator::StokesNitscheOperator(mfem::Mesh& mesh,
     initNitsche(theta, penalty, factor);
 }
 
-const MassLumping StokesNitscheOperator::getMassLumping() const
-{
-    return ml_;
-}
-
-const OperatorMode StokesNitscheOperator::getOperatorMode() const
-{
-    return opmode_;
-}
-
-void StokesNitscheOperator::setGalerkinMode()
-{
-    opmode_ = GALERKIN;
-}
-
-void StokesNitscheOperator::setDECMode()
-{
-    opmode_ = DEC;
-}
-
 std::unique_ptr<mfem::SparseMatrix>
 StokesNitscheOperator::getFullGalerkinSystem()
 {
@@ -310,66 +290,6 @@ StokesNitscheOperator::getFullSystem()
         return getFullGalerkinSystem();
     else // DEC
         return getFullDECSystem();
-}
-
-const mfem::SparseMatrix& StokesNitscheOperator::getD0() const
-{
-    return d0;
-}
-
-const mfem::SparseMatrix& StokesNitscheOperator::getD1() const
-{
-    return d1;
-}
-
-mfem::SparseMatrix& StokesNitscheOperator::getD0()
-{
-    return d0;
-}
-
-mfem::SparseMatrix& StokesNitscheOperator::getD1()
-{
-    return d1;
-}
-
-const mfem::BilinearForm& StokesNitscheOperator::getMassH1() const
-{
-    return *mass_h1_;
-}
-
-const mfem::BilinearForm& StokesNitscheOperator::getMassHCurl() const
-{
-    return *mass_hcurl_;
-}
-
-const mfem::BilinearForm& StokesNitscheOperator::getMassHDivOrL2() const
-{
-    return *mass_hdiv_or_l2_;
-}
-
-const mfem::BilinearForm& StokesNitscheOperator::getNitsche() const
-{
-    return *nitsche_;
-}
-
-const mfem::Vector& StokesNitscheOperator::getMassH1Lumped() const
-{
-    return mass_h1_lumped_;
-}
-
-const mfem::Vector& StokesNitscheOperator::getMassHCurlLumped() const
-{
-    return mass_hcurl_lumped_;
-}
-
-const mfem::Vector& StokesNitscheOperator::getMassHDivOrL2Lumped() const
-{
-    return mass_hdiv_or_l2_lumped_;
-}
-
-const mfem::Mesh& StokesNitscheOperator::getMesh() const
-{
-    return mesh_;
 }
 
 void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
