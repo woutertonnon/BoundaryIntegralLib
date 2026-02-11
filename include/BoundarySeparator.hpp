@@ -4,7 +4,12 @@
 #include "mfem.hpp"
 
 mfem::SparseMatrix
-getBDPermutationMatrix(const mfem::Mesh& mesh,
-                       const mfem::FiniteElementSpace& fes);
+createPermutationMatrixFromVector(const mfem::Array<int>& p);
+
+mfem::Array<int>
+createBDPermutation(const mfem::FiniteElementSpace& fes);
+
+mfem::SparseMatrix
+getBDPermutationMatrix(const mfem::FiniteElementSpace& fes);
 
 #endif
