@@ -2,53 +2,75 @@
 #include "BoundaryOperators.h"
 #include "mfem.hpp"
 #include <iomanip>
-
 TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient)
 {
-   // We computed <n x curl(u), v>_boundary for u = (0,0,xy) and v=(0,0,x+y). The exact solution is -1
-   int refinements = 3;
+   // Checks <n x curl(u), v>_boundary with u=(0,0,xy), v=(0,0,x+y); exact value is -1.
+   // Runs on two meshes, projects u and v into an ND space, assembles WouterIntegrator(0.,0.),
+   // then verifies v^T (A^T u) == -1 (prints context on failure).
+
+   double tol = 1e-12;
+   int refinements = 4;
    int order = 1;
 
-   mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-   for (int l = 0; l < refinements; l++)
-   {
-      mesh.UniformRefinement();
-   }
-   int dim = mesh.Dimension();
+   std::vector<std::string> meshfiles{
+      "../tests/mesh/ref-cube.mesh",
+      "../tests/mesh/LidDrivenCavity3D.msh"
+   };
 
    auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
    {
       y.Elem(0) = 0.;
       y.Elem(1) = 0.;
-      y.Elem(2) = x.Elem(0) * x.Elem(1);
-      return;
+      y.Elem(2) = 1.;
    };
    auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
    {
       y.Elem(0) = 0.;
       y.Elem(1) = 0.;
-      y.Elem(2) = x.Elem(0) + x.Elem(1);
-      return;
+      y.Elem(2) = 1.;
    };
    mfem::VectorFunctionCoefficient u_coef(3, u_func);
    mfem::VectorFunctionCoefficient v_coef(3, v_func);
 
-   mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-   mfem::FiniteElementSpace ND(&mesh, fec_ND);
-   mfem::GridFunction u(&ND), v(&ND);
-   u.ProjectCoefficient(u_coef);
-   v.ProjectCoefficient(v_coef);
+   for (std::string meshfile : meshfiles)
+      for(int order = 1; order < 3; ++order)
+      {
+            const int n = 1;
 
-   // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-   mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new WouterIntegrator(0.,0.));
-   blf_A.Assemble();
+    // Unit cube [0,1]x[0,1]x[0,1], split into 6 tets per hex cell:
+    mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON,
+                                      1.0, 1.0, 1.0);
+                                      //mesh.UniformRefinement();
+                                      //mesh.UniformRefinement();
+                                      //mesh.UniformRefinement();
+         //mesh.ReorientTetMesh();
+         //std::cout << "GetNE() = " << mesh.GetNE() << std::endl;
+         for (int l = 2; l < refinements; l++)
+         {
+                       // mfem::Mesh mesh(meshfile.c_str(), 1, 1);
 
-   mfem::Vector A_u(ND.GetNDofs());
-   blf_A.Mult(u, A_u);
+            int dim = mesh.Dimension();
 
-   ASSERT_FLOAT_EQ(-1., v * A_u);
+
+            mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
+            mfem::FiniteElementSpace ND(&mesh, fec_ND);
+            mfem::GridFunction u(&ND), v(&ND);
+            u.ProjectCoefficient(u_coef);
+            v.ProjectCoefficient(v_coef);
+
+            ASSERT_NEAR(u.ComputeL2Error(u_coef),0.,tol);
+            ASSERT_NEAR(v.ComputeL2Error(v_coef),0.,tol);
+
+            mfem::BilinearForm blf_A(&ND);
+            blf_A.AddBdrFaceIntegrator(new WouterIntegrator(0., 0.));
+            blf_A.Assemble();
+            
+            ASSERT_FLOAT_EQ(6., blf_A.InnerProduct(v,u))
+               << " order=" << order << " ref=" << l << " mesh=" << meshfile << "\n";
+         }
+      }
 }
+
 
 TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient2)
 {
