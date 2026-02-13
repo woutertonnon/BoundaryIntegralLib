@@ -1,500 +1,455 @@
 #include <gtest/gtest.h>
+
 #include "BoundaryOperators.h"
 #include "mfem.hpp"
-#include <iomanip>
+
+#include <cmath>
+#include <iostream>
+#include <memory>
+#include <vector>
 
 TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient)
 {
-   // We computed <n x curl(u), v>_boundary for u = (0,0,xy) and v=(0,0,x+y). The exact solution is -1
-   int refinements = 3;
-   int order = 1;
+   // Exact-value regression for <n x curl(u), v>_∂Ω with theta=0, Cw=0.
+   // Uses u=(0,0,xy), v=(0,0,x+y) on a refined reference cube.
+   // Expected result: -1.
+   const int refinements = 3;
+   const int order = 1;
 
    mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-   for (int l = 0; l < refinements; l++)
-   {
-      mesh.UniformRefinement();
-   }
-   int dim = mesh.Dimension();
+   for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+   const int dim = mesh.Dimension();
 
-   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
+   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y)
    {
-      y.Elem(0) = 0.;
-      y.Elem(1) = 0.;
-      y.Elem(2) = x.Elem(0) * x.Elem(1);
-      return;
+      y.SetSize(3);
+      y = 0.0;
+      y(2) = x(0) * x(1);
    };
-   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
+   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y)
    {
-      y.Elem(0) = 0.;
-      y.Elem(1) = 0.;
-      y.Elem(2) = x.Elem(0) + x.Elem(1);
-      return;
+      y.SetSize(3);
+      y = 0.0;
+      y(2) = x(0) + x(1);
    };
+
    mfem::VectorFunctionCoefficient u_coef(3, u_func);
    mfem::VectorFunctionCoefficient v_coef(3, v_func);
 
-   mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-   mfem::FiniteElementSpace ND(&mesh, fec_ND);
-   mfem::GridFunction u(&ND), v(&ND);
+   auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+   mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+   mfem::GridFunction u(&nd), v(&nd);
    u.ProjectCoefficient(u_coef);
    v.ProjectCoefficient(v_coef);
 
-   // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-   mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.,0.));
-   blf_A.Assemble();
+   mfem::BilinearForm A(&nd);
+   A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.0, 0.0));
+   A.Assemble();
+   A.Finalize();
 
-   mfem::Vector A_u(ND.GetNDofs());
-   blf_A.Mult(u, A_u);
+   mfem::Vector Au(nd.GetNDofs());
+   A.Mult(u, Au);
 
-   ASSERT_FLOAT_EQ(-1., v * A_u);
+   ASSERT_FLOAT_EQ(-1.0, v * Au);
 }
 
 TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient2)
 {
-   // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
-   int refinements = 0;
-   int order = 2;
+   // Exact-value regression for <n x curl(u), v>_∂Ω with theta=-1, Cw=0.
+   // Uses u=(xyz,xxz,xyy), v=(xx+y,yy+z,zz+x) on the reference cube.
+   // Expected result: -3/4 - 1/3.
+   const int refinements = 0;
+   const int order = 2;
 
    mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-   for (int l = 0; l < refinements; l++)
-   {
-      mesh.UniformRefinement();
-   }
-   int dim = mesh.Dimension();
-   
-   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-   {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
+   for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+   const int dim = mesh.Dimension();
 
-      // u = (0, 0, X*Y)
+   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y)
+   {
+      const double X = x(0), Y = x(1), Z = x(2);
       y.SetSize(3);
-      y.Elem(0) = X*Y*Z;
-      y.Elem(1) = X*X*Z;
-      y.Elem(2) = X*Y*Y;
+      y(0) = X * Y * Z;
+      y(1) = X * X * Z;
+      y(2) = X * Y * Y;
    };
-
-   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
+   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y)
    {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
-
-      // v = (0, 0, X + Y + X*Y)   (slightly more complex than linear)
+      const double X = x(0), Y = x(1), Z = x(2);
       y.SetSize(3);
-      y.Elem(0) = X*X+Y;
-      y.Elem(1) = Y*Y+Z;
-      y.Elem(2) = Z*Z+X;
+      y(0) = X * X + Y;
+      y(1) = Y * Y + Z;
+      y(2) = Z * Z + X;
    };
 
    mfem::VectorFunctionCoefficient u_coef(3, u_func);
    mfem::VectorFunctionCoefficient v_coef(3, v_func);
 
-   mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-   mfem::FiniteElementSpace ND(&mesh, fec_ND);
-   mfem::GridFunction u(&ND), v(&ND);
+   auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+   mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+   mfem::GridFunction u(&nd), v(&nd);
    u.ProjectCoefficient(u_coef);
    v.ProjectCoefficient(v_coef);
 
+   mfem::BilinearForm A(&nd);
+   A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-1.0, 0.0));
+   A.Assemble();
+   A.Finalize();
 
+   mfem::Vector Au(nd.GetNDofs());
+   A.Mult(u, Au);
 
-   // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-   mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-1.,0.));
-   blf_A.Assemble();
-   blf_A.Finalize();
-
-   mfem::Vector A_u(ND.GetNDofs());
-   blf_A.Mult(u, A_u);
-   ASSERT_FLOAT_EQ(-3. / 4.-1./3., v * A_u);
+   ASSERT_FLOAT_EQ(-3.0 / 4.0 - 1.0 / 3.0, v * Au);
 }
-
 
 TEST(ND_NitscheIntegratorTest, ApproximationTest)
 {
-   // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
-   double last_err;
-   double one_but_last_err;
-   for(int order = 1; order < 3; ++order){
-       for(int refinements = 0; refinements < 9-2*order; refinements++){
-        
-           mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-           for (int l = 0; l < refinements; l++)
-           {
-              mesh.UniformRefinement();
-           }
-           int dim = mesh.Dimension();
-           
-           auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-           {
-              const double X = x.Elem(0);
-              const double Y = x.Elem(1);
-              const double Z = x.Elem(2);
-        
-              // u = (0, 0, X*Y)
-              y.SetSize(3);
-              y.Elem(0) = std::exp(X - 2*Y + Z) + std::sin(2*M_PI*X)*std::cos(M_PI*Z) + X*Y*(1 - Z);
-              y.Elem(1) = X*X*std::sin(M_PI*Y) + std::cos(2*M_PI*Z)*(Y - Z) + std::exp(-X*Z);
-              y.Elem(2) = std::sin(M_PI*X*Y) + Z*Z*std::cos(2*M_PI*Y) + (X - Y)*std::exp(Z);
-        
-           };
-        
-           auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-           {
-              const double X = x.Elem(0);
-              const double Y = x.Elem(1);
-              const double Z = x.Elem(2);
-        
-              y.SetSize(3); 
-              y.Elem(0) = std::cos(M_PI*X)*std::exp(Y - Z) + X*(1 - X)*Y + std::sin(2*M_PI*Z);
-              y.Elem(1) = std::sin(2*M_PI*X*Z) + std::exp(-Y) + (Y - 1./2.)*(Y - 1./2.)*(Y - 1./2.);
-              y.Elem(2) = std::cos(2*M_PI*Y*Z) + std::exp(X*Y) - Z*(1 - Z);
-           };
-        
-           mfem::VectorFunctionCoefficient u_coef(3, u_func);
-           mfem::VectorFunctionCoefficient v_coef(3, v_func);
-        
-           mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-           mfem::FiniteElementSpace ND(&mesh, fec_ND);
-           mfem::GridFunction u(&ND), v(&ND);
-           u.ProjectCoefficient(u_coef);
-           v.ProjectCoefficient(v_coef);
-        
-        
-        
-           // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-           mfem::BilinearForm blf_A(&ND);
-           blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(1.0,0.));
-           blf_A.Assemble();
-           blf_A.Finalize();
-        
-           mfem::Vector A_u(ND.GetNDofs());
-           blf_A.Mult(u, A_u);
-           one_but_last_err = last_err;
-           last_err = 4.4722583402915601 - (v * A_u);
-           std::cout << "refinement: " << refinements << ", order: " << order << ", error: " << last_err << std::endl;
-       }
-       EXPECT_LT(last_err, (std::pow(0.5,order)+0.01)*one_but_last_err);
+   // Convergence test for the Nitsche boundary operator (theta=1, Cw=0).
+   // Uses smooth non-polynomial u,v and compares v*(A*u) to a fixed reference value.
+   // Expects error reduction ~ O(h^order) under refinement.
+   double last_err = 0.0, prev_err = 0.0;
+
+   for (int order = 1; order < 3; ++order)
+   {
+      for (int refinements = 0; refinements < 9 - 2 * order; ++refinements)
+      {
+         mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
+         for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+         const int dim = mesh.Dimension();
+
+         auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y)
+         {
+            const double X = x(0), Y = x(1), Z = x(2);
+            y.SetSize(3);
+            y(0) = std::exp(X - 2 * Y + Z)
+                 + std::sin(2 * M_PI * X) * std::cos(M_PI * Z)
+                 + X * Y * (1 - Z);
+            y(1) = X * X * std::sin(M_PI * Y)
+                 + std::cos(2 * M_PI * Z) * (Y - Z)
+                 + std::exp(-X * Z);
+            y(2) = std::sin(M_PI * X * Y)
+                 + Z * Z * std::cos(2 * M_PI * Y)
+                 + (X - Y) * std::exp(Z);
+         };
+
+         auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y)
+         {
+            const double X = x(0), Y = x(1), Z = x(2);
+            y.SetSize(3);
+            y(0) = std::cos(M_PI * X) * std::exp(Y - Z)
+                 + X * (1 - X) * Y
+                 + std::sin(2 * M_PI * Z);
+            y(1) = std::sin(2 * M_PI * X * Z)
+                 + std::exp(-Y)
+                 + std::pow(Y - 0.5, 3);
+            y(2) = std::cos(2 * M_PI * Y * Z)
+                 + std::exp(X * Y)
+                 - Z * (1 - Z);
+         };
+
+         mfem::VectorFunctionCoefficient u_coef(3, u_func);
+         mfem::VectorFunctionCoefficient v_coef(3, v_func);
+
+         auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+         mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+         mfem::GridFunction u(&nd), v(&nd);
+         u.ProjectCoefficient(u_coef);
+         v.ProjectCoefficient(v_coef);
+
+         mfem::BilinearForm A(&nd);
+         A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(1.0, 0.0));
+         A.Assemble();
+         A.Finalize();
+
+         mfem::Vector Au(nd.GetNDofs());
+         A.Mult(u, Au);
+
+         prev_err = last_err;
+         last_err = 4.4722583402915601 - (v * Au);
+
+         std::cout << "refinement: " << refinements
+                   << ", order: " << order
+                   << ", error: " << last_err << '\n';
+      }
+
+      EXPECT_LT(last_err, (std::pow(0.5, order) + 0.01) * prev_err);
    }
 }
+
 TEST(ND_NitscheIntegratorTest, ApproximationTestAsymmetricPenalty)
 {
-   double last_err;
-   double one_but_last_err;
-   std::vector<double> exact_integrals{667.0180872213067,1330.817580069015,2658.416565764433,5313.614537155269,10624.01047993694,21244.80236550028}; // The exact integral is now dependent on h, because of the C/h <u x n, v x n> term in the integral.
-   for(int order = 1; order < 3; ++order){
-       for(int refinements = 0; refinements < exact_integrals.size(); refinements++){
-        
-           mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-           for (int l = 0; l < refinements; l++)
-           {
-              mesh.UniformRefinement();
-           }
-           int dim = mesh.Dimension();
-           
-           auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-           {
-              const double X = x.Elem(0);
-              const double Y = x.Elem(1);
-              const double Z = x.Elem(2);
-        
-              // u = (0, 0, X*Y)
-              y.SetSize(3);
-              y.Elem(0) = std::exp(X - 2*Y + Z) + std::sin(2*M_PI*X)*std::cos(M_PI*Z) + X*Y*(1 - Z);
-              y.Elem(1) = X*X*std::sin(M_PI*Y) + std::cos(2*M_PI*Z)*(Y - Z) + std::exp(-X*Z);
-              y.Elem(2) = std::sin(M_PI*X*Y) + Z*Z*std::cos(2*M_PI*Y) + (X - Y)*std::exp(Z);
-        
-           };
-        
-           auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-           {
-              const double X = x.Elem(0);
-              const double Y = x.Elem(1);
-              const double Z = x.Elem(2);
-        
-              y.SetSize(3); 
-              y.Elem(0) = std::cos(M_PI*X)*std::exp(Y - Z) + X*(1 - X)*Y + std::sin(2*M_PI*Z);
-              y.Elem(1) = std::sin(2*M_PI*X*Z) + std::exp(-Y) + (Y - 1./2.)*(Y - 1./2.)*(Y - 1./2.);
-              y.Elem(2) = std::cos(2*M_PI*Y*Z) + std::exp(X*Y) - Z*(1 - Z);
-           };
-        
-           mfem::VectorFunctionCoefficient u_coef(3, u_func);
-           mfem::VectorFunctionCoefficient v_coef(3, v_func);
-        
-           mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-           mfem::FiniteElementSpace ND(&mesh, fec_ND);
-           mfem::GridFunction u(&ND), v(&ND);
-           u.ProjectCoefficient(u_coef);
-           v.ProjectCoefficient(v_coef);
-        
-        
-        
-           // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-           mfem::BilinearForm blf_A(&ND);
-           blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-1.0,100.));
-           blf_A.Assemble();
-           blf_A.Finalize();
-        
-           mfem::Vector A_u(ND.GetNDofs());
-           blf_A.Mult(u, A_u);
-           one_but_last_err = last_err;
-           last_err = std::abs(exact_integrals.at(refinements) - (v * A_u));
-           std::cout << "refinement: " << refinements << ", order: " << order << ", error: " << last_err << std::endl;
-       }
-       EXPECT_LT(last_err, (std::pow(0.5,order)+0.03)*one_but_last_err);
+   // Convergence test with asymmetric penalty (theta=-1, Cw=100).
+   // "Exact" integral depends on h; compares against precomputed references per refinement.
+   // Expects error reduction consistent with order.
+   double last_err = 0.0, prev_err = 0.0;
+
+   const std::vector<double> exact = {
+      667.0180872213067, 1330.817580069015, 2658.416565764433,
+      5313.614537155269, 10624.01047993694, 21244.80236550028
+   };
+
+   for (int order = 1; order < 3; ++order)
+   {
+      for (int refinements = 0; refinements < static_cast<int>(exact.size()); ++refinements)
+      {
+         mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
+         for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+         const int dim = mesh.Dimension();
+
+         auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y)
+         {
+            const double X = x(0), Y = x(1), Z = x(2);
+            y.SetSize(3);
+            y(0) = std::exp(X - 2 * Y + Z)
+                 + std::sin(2 * M_PI * X) * std::cos(M_PI * Z)
+                 + X * Y * (1 - Z);
+            y(1) = X * X * std::sin(M_PI * Y)
+                 + std::cos(2 * M_PI * Z) * (Y - Z)
+                 + std::exp(-X * Z);
+            y(2) = std::sin(M_PI * X * Y)
+                 + Z * Z * std::cos(2 * M_PI * Y)
+                 + (X - Y) * std::exp(Z);
+         };
+
+         auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y)
+         {
+            const double X = x(0), Y = x(1), Z = x(2);
+            y.SetSize(3);
+            y(0) = std::cos(M_PI * X) * std::exp(Y - Z)
+                 + X * (1 - X) * Y
+                 + std::sin(2 * M_PI * Z);
+            y(1) = std::sin(2 * M_PI * X * Z)
+                 + std::exp(-Y)
+                 + std::pow(Y - 0.5, 3);
+            y(2) = std::cos(2 * M_PI * Y * Z)
+                 + std::exp(X * Y)
+                 - Z * (1 - Z);
+         };
+
+         mfem::VectorFunctionCoefficient u_coef(3, u_func);
+         mfem::VectorFunctionCoefficient v_coef(3, v_func);
+
+         auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+         mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+         mfem::GridFunction u(&nd), v(&nd);
+         u.ProjectCoefficient(u_coef);
+         v.ProjectCoefficient(v_coef);
+
+         mfem::BilinearForm A(&nd);
+         A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-1.0, 100.0));
+         A.Assemble();
+         A.Finalize();
+
+         mfem::Vector Au(nd.GetNDofs());
+         A.Mult(u, Au);
+
+         prev_err = last_err;
+         last_err = std::abs(exact[refinements] - (v * Au));
+
+         std::cout << "refinement: " << refinements
+                   << ", order: " << order
+                   << ", error: " << last_err << '\n';
+      }
+
+      EXPECT_LT(last_err, (std::pow(0.5, order) + 0.03) * prev_err);
    }
 }
 
 TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient3)
 {
-   // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
-   int refinements = 0;
-   int order = 2;
+   // Sanity: constant u should make the boundary curl term vanish.
+   // Checks v*(A*u) ≈ 0 for theta=0, Cw=0.
+   // Uses polynomial v on the reference cube.
+   const int refinements = 0;
+   const int order = 2;
 
    mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-   for (int l = 0; l < refinements; l++)
-   {
-      mesh.UniformRefinement();
-   }
-   int dim = mesh.Dimension();
-   
-   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-   {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
+   for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+   const int dim = mesh.Dimension();
 
-      // u = (0, 0, X*Y)
+   auto u_func = [](const mfem::Vector &, double, mfem::Vector &y)
+   {
       y.SetSize(3);
-      y.Elem(0) =1;
-      y.Elem(1) = 1;
-      y.Elem(2) = 1;
+      y = 1.0;
    };
-
-   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
+   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y)
    {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
-
-      // v = (0, 0, X + Y + X*Y)   (slightly more complex than linear)
+      const double X = x(0), Y = x(1), Z = x(2);
       y.SetSize(3);
-      y.Elem(0) = X*X+Y;
-      y.Elem(1) = Y*Y+Z;
-      y.Elem(2) = Z*Z+X;
+      y(0) = X * X + Y;
+      y(1) = Y * Y + Z;
+      y(2) = Z * Z + X;
    };
 
    mfem::VectorFunctionCoefficient u_coef(3, u_func);
    mfem::VectorFunctionCoefficient v_coef(3, v_func);
 
-   mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-   mfem::FiniteElementSpace ND(&mesh, fec_ND);
-   mfem::GridFunction u(&ND), v(&ND);
+   auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+   mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+   mfem::GridFunction u(&nd), v(&nd);
    u.ProjectCoefficient(u_coef);
    v.ProjectCoefficient(v_coef);
 
+   mfem::BilinearForm A(&nd);
+   A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.0, 0.0));
+   A.Assemble();
+   A.Finalize();
 
+   mfem::Vector Au(nd.GetNDofs());
+   A.Mult(u, Au);
 
-   // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-   mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.,0.));
-   blf_A.Assemble();
-   blf_A.Finalize();
-
-   mfem::Vector A_u(ND.GetNDofs());
-   blf_A.Mult(u, A_u);
-   ASSERT_NEAR(0., v * A_u, 1e-12);
+   ASSERT_NEAR(0.0, v * Au, 1e-12);
 }
 
 TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient4)
 {
-   // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
-   int refinements = 0;
-   int order = 2;
+   // Sanity: constant u should yield A*u ≈ 0 entrywise.
+   // Applies the operator with theta=0, Cw=0.
+   // Verifies all entries of A*u are ~0.
+   const int refinements = 0;
+   const int order = 2;
 
    mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-   for (int l = 0; l < refinements; l++)
-   {
-      mesh.UniformRefinement();
-   }
-   int dim = mesh.Dimension();
-   
-   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-   {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
+   for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+   const int dim = mesh.Dimension();
 
-      // u = (0, 0, X*Y)
+   auto u_func = [](const mfem::Vector &, double, mfem::Vector &y)
+   {
       y.SetSize(3);
-      y.Elem(0) =1;
-      y.Elem(1) = 1;
-      y.Elem(2) = 1;
+      y = 1.0;
    };
 
    mfem::VectorFunctionCoefficient u_coef(3, u_func);
 
-   mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-   mfem::FiniteElementSpace ND(&mesh, fec_ND);
-   mfem::GridFunction u(&ND), v(&ND);
+   auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+   mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+   mfem::GridFunction u(&nd);
    u.ProjectCoefficient(u_coef);
 
+   mfem::BilinearForm A(&nd);
+   A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.0, 0.0));
+   A.Assemble();
+   A.Finalize();
 
+   mfem::Vector Au(nd.GetNDofs());
+   A.Mult(u, Au);
 
-   // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-   mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.,0.));
-   blf_A.Assemble();
-   blf_A.Finalize();
-
-   mfem::Vector A_u(ND.GetNDofs());
-   blf_A.Mult(u, A_u);
-   for(auto val: A_u)
-      ASSERT_NEAR(val,0.,1e-10);
+   for (int i = 0; i < Au.Size(); ++i)
+   {
+      ASSERT_NEAR(0.0, Au(i), 1e-10);
+   }
 }
-
 
 TEST(ND_NitscheIntegratorTest, ConsistencyTest)
 {
-   // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
-   int refinements = 0;
-   int order = 1;
-   double theta = -1.;
-   double Cw = 0e8;
-   for(theta = -1.; theta <= 1.; theta+=1.)
-	   for(Cw = 0.; Cw < 100.; Cw+=10.){
-       mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
-       for (int l = 0; l < refinements; l++)
-       {
-          mesh.UniformRefinement();
-       }
-       int dim = mesh.Dimension();
-       
-       auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-       {
-          const double X = x.Elem(0);
-          const double Y = x.Elem(1);
-          const double Z = x.Elem(2);
+   // Consistency: LF integrator equals applying bilinear form to the same u.
+   // Sweeps theta ∈ {-1,0,1} and Cw ∈ {0,10,...,90}.
+   // Checks f - A*u is near zero (loose tolerance).
+   const int refinements = 0;
+   const int order = 1;
 
-          // u = (0, 0, X*Y)
-          y.SetSize(3);
-          y.Elem(0) =-Y;
-          y.Elem(1) = X;
-          y.Elem(2) = 1;
-       };
+   mfem::Mesh mesh("../extern/mfem/data/ref-cube.mesh", 1, 1);
+   for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+   const int dim = mesh.Dimension();
 
-       mfem::VectorFunctionCoefficient u_coef(3, u_func);
-
-       mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-       mfem::FiniteElementSpace ND(&mesh, fec_ND);
-       mfem::GridFunction u(&ND), v(&ND);
-       u.ProjectCoefficient(u_coef);
-
-
-
-       // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
-       mfem::BilinearForm blf_A(&ND);
-       blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(theta, Cw));
-       blf_A.Assemble();
-       blf_A.Finalize();
-
-       mfem::Vector blf_A_u(blf_A.Height());
-       blf_A.Mult(u,blf_A_u);
-
-       mfem::LinearForm f_lf(&ND);
-       f_lf.AddBdrFaceIntegrator(new ND_NitscheLFIntegrator(theta, Cw, u_coef));
-       f_lf.Assemble();
-       mfem::Vector dif(f_lf.Size());
-       dif.Set(1.,f_lf);
-       dif -= blf_A_u;
-
-       for(auto val: dif)
-          ASSERT_NEAR(val,0.,10);
-    }
-}
-
-
-TEST(ND_NitscheIntegratorTest, rotationVanishingTest)
-{
-   // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
-   int refinements = 1;
-   int order = 1;
-   double theta = 0.;
-   double Cw = 0.;
-
-    mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
-        1, 1, 1,            // nx, ny, nz
-        mfem::Element::HEXAHEDRON,
-        1.0, 1.0, 1.0       // sx, sy, sz (unit cube)
-    );
-   for (int l = 0; l < refinements; l++)
+   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y)
    {
-      mesh.UniformRefinement();
-   }
-   int dim = mesh.Dimension();
-   
-   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-   {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
-
-      // u = (0, 0, X*Y)
+      const double X = x(0), Y = x(1);
       y.SetSize(3);
-      y.Elem(0) =-Y;
-      y.Elem(1) = X;
-      y.Elem(2) = 0;
-   };
-   
-   auto curl_u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
-   {
-      const double X = x.Elem(0);
-      const double Y = x.Elem(1);
-      const double Z = x.Elem(2);
-
-      y.SetSize(3);
-      y.Elem(0) =-0;
-      y.Elem(1) = 0;
-      y.Elem(2) = 2;
+      y(0) = -Y;
+      y(1) =  X;
+      y(2) =  1.0;
    };
 
-   mfem::VectorFunctionCoefficient curl_u_coef(3, curl_u_func);
    mfem::VectorFunctionCoefficient u_coef(3, u_func);
 
-   mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
-   mfem::FiniteElementSpace ND(&mesh, fec_ND);
-   mfem::GridFunction u(&ND);
+   auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+   mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+   mfem::GridFunction u(&nd);
    u.ProjectCoefficient(u_coef);
 
-   ASSERT_NEAR(u.ComputeL2Error(u_coef),0.,1e-13);
-
-   mfem::Array<int> bdr_tdofs;
-   ND.GetBoundaryTrueDofs(bdr_tdofs);
-   mfem::Vector is_no_bdof(ND.GetTrueVSize()); // char works well as bool mask
-   is_no_bdof = 1;
-   
-   for (int k = 0; k < bdr_tdofs.Size(); k++)
+   for (double theta : {-1.0, 0.0, 1.0})
    {
-      const int tdof = bdr_tdofs[k];
-      if (0 <= tdof && tdof < is_no_bdof.Size()) { is_no_bdof[tdof] = 0; }
+      for (double Cw = 0.0; Cw < 100.0; Cw += 10.0)
+      {
+         mfem::BilinearForm A(&nd);
+         A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(theta, Cw));
+         A.Assemble();
+         A.Finalize();
+
+         mfem::Vector Au(A.Height());
+         A.Mult(u, Au);
+
+         mfem::LinearForm f(&nd);
+         f.AddBdrFaceIntegrator(new ND_NitscheLFIntegrator(theta, Cw, u_coef));
+         f.Assemble();
+
+         mfem::Vector dif(f.Size());
+         dif = f;
+         dif -= Au;
+
+         for (int i = 0; i < dif.Size(); ++i)
+         {
+            ASSERT_NEAR(0.0, dif(i), 10.0);
+         }
+      }
    }
-
-   mfem::LinearForm lf_f(&ND);
-   lf_f.AddBoundaryIntegrator(new mfem::VectorFEBoundaryTangentLFIntegrator(curl_u_coef));
-   lf_f.Assemble();
-
-   mfem::ConstantCoefficient one_coef(1.);
-   mfem::BilinearForm blf_A(&ND);
-   blf_A.AddDomainIntegrator(new mfem::CurlCurlIntegrator(one_coef));
-   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0., 0.));
-   blf_A.Assemble();
-   blf_A.Finalize();
-   mfem::Vector blf_curlcurl_u(blf_A.Height()), blf_A_u(blf_A.Height());
-
-   for(auto val: blf_A_u)
-      ASSERT_NEAR(val,0.,1e-13);
 }
 
+TEST(ND_NitscheIntegratorTest, RotationVanishingTest)
+{
+   // Regression: rigid rotation u=(-y,x,0) yields vanishing curlcurl + Nitsche bdr action.
+   // Builds Cartesian cube mesh, projects u, applies operator A, expects A*u ≈ 0.
+   // Also checks projection error is ~0.
+   const int refinements = 1;
+   const int order = 1;
 
+   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
+      1, 1, 1,
+      mfem::Element::HEXAHEDRON,
+      1.0, 1.0, 1.0);
+
+   for (int l = 0; l < refinements; ++l) { mesh.UniformRefinement(); }
+   const int dim = mesh.Dimension();
+
+   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y)
+   {
+      (void)x;
+      y.SetSize(3);
+      y(0) = -x(1);
+      y(1) =  x(0);
+      y(2) =  0.0;
+   };
+
+   mfem::VectorFunctionCoefficient u_coef(3, u_func);
+
+   auto fec = std::make_unique<mfem::ND_FECollection>(order, dim);
+   mfem::FiniteElementSpace nd(&mesh, fec.get());
+
+   mfem::GridFunction u(&nd);
+   u.ProjectCoefficient(u_coef);
+
+   ASSERT_NEAR(u.ComputeL2Error(u_coef), 0.0, 1e-13);
+
+   mfem::ConstantCoefficient one(1.0);
+   mfem::BilinearForm A(&nd);
+   A.AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
+   A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.0, 0.0));
+   A.Assemble();
+   A.Finalize();
+
+   mfem::Vector Au(A.Height());
+   A.Mult(u, Au);
+
+   for (int i = 0; i < Au.Size(); ++i)
+   {
+      ASSERT_NEAR(0.0, Au(i), 1e-13);
+   }
+}
