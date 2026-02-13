@@ -161,18 +161,20 @@ void StokesMG::cycle(const int level_idx,
             // If the matrix is extended (constraint added), we map b -> b_ext
             if (coarse_b_ext_.Size() > 0)
             {
-                // Pad input: copy b, zero out the extra entries
+                // 1. Pad input: copy b (small) into b_ext (large)
                 coarse_b_ext_ = 0.0;
                 coarse_b_ext_.SetVector(b, 0);
 
                 umf_solver_->Mult(coarse_b_ext_, coarse_x_ext_);
 
-                // Extract solution: copy back only the relevant part
-                x.SetVector(coarse_x_ext_, 0);
+                // 2. Extract solution: copy only the first 'x.Size()' elements
+                // Create a view of the extended vector limited to the original size
+                mfem::Vector x_view(coarse_x_ext_.GetData(), x.Size());
+                x = x_view;
             }
             else
             {
-                // Normal solve
+                // Normal solve (sizes match)
                 umf_solver_->Mult(b, x);
             }
         }

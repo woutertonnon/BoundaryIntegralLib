@@ -7,6 +7,9 @@
 
 TEST(StokesMGTest, VCycleConvergence)
 {
+#ifdef MFEM_USE_SUITESPARSE
+    std::cout << "Using suitesparse" << std::endl;
+#endif
     // 1. Setup Parameters
     const unsigned int n = 1;
     const double theta = 1.0,
