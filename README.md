@@ -7,7 +7,7 @@ Small C++ library providing custom MFEM boundary / jump integrators.
 Clone with submodules:
 
 ``` bash
-git clone --recurse-submodules -b cleanup https://github.com/woutertonnon/BoundaryIntegralLib.git
+git clone --recurse-submodules https://github.com/woutertonnon/BoundaryIntegralLib.git
 cd BoundaryIntegralLib
 ```
 
