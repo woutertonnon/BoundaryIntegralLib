@@ -13,10 +13,11 @@ add_library(boundaryoperators_project_options INTERFACE)
 # Your public headers
 target_include_directories(boundaryoperators_project_options
   INTERFACE
-    "${PROJECT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 target_compile_features(boundaryoperators_project_options INTERFACE cxx_std_17) # Same as MFEM
+target_link_libraries(boundaryoperators_project_options )
 
 add_subdirectory(extern)
 add_subdirectory(src)
