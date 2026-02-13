@@ -3,13 +3,13 @@
 
 
 
-void WouterIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
+void ND_NitscheIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
                                              mfem::DenseMatrix &elmat)
 {
    return;
 }
 
-void WouterIntegrator::AssembleFaceMatrix(
+void ND_NitscheIntegrator::AssembleFaceMatrix(
     const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
     mfem::FaceElementTransformations &Trans, mfem::DenseMatrix &elmat)
 {
@@ -83,13 +83,13 @@ void WouterIntegrator::AssembleFaceMatrix(
    }
 }
 
-void WouterLFIntegrator::AssembleRHSElementVect(
+void ND_NitscheLFIntegrator::AssembleRHSElementVect(
     const mfem::FiniteElement &el, mfem::ElementTransformation &Tr, mfem::Vector &elvect)
 {
    return;
 }
 
-void WouterLFIntegrator::AssembleRHSElementVect(
+void ND_NitscheLFIntegrator::AssembleRHSElementVect(
     const mfem::FiniteElement &el, mfem::FaceElementTransformations &Tr, mfem::Vector &elvect)
 {
    int dim = el.GetDim();

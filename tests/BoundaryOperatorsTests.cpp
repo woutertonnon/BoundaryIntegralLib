@@ -3,7 +3,7 @@
 #include "mfem.hpp"
 #include <iomanip>
 
-TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient)
+TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient)
 {
    // We computed <n x curl(u), v>_boundary for u = (0,0,xy) and v=(0,0,x+y). The exact solution is -1
    int refinements = 3;
@@ -41,7 +41,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient)
 
    // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
    mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new WouterIntegrator(0.,0.));
+   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.,0.));
    blf_A.Assemble();
 
    mfem::Vector A_u(ND.GetNDofs());
@@ -50,7 +50,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient)
    ASSERT_FLOAT_EQ(-1., v * A_u);
 }
 
-TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient2)
+TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient2)
 {
    // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
    int refinements = 0;
@@ -102,7 +102,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient2)
 
    // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
    mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new WouterIntegrator(-1.,0.));
+   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-1.,0.));
    blf_A.Assemble();
    blf_A.Finalize();
 
@@ -112,7 +112,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient2)
 }
 
 
-TEST(WouterIntegratorTest, ApproximationTest)
+TEST(ND_NitscheIntegratorTest, ApproximationTest)
 {
    // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
    double last_err;
@@ -166,7 +166,7 @@ TEST(WouterIntegratorTest, ApproximationTest)
         
            // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
            mfem::BilinearForm blf_A(&ND);
-           blf_A.AddBdrFaceIntegrator(new WouterIntegrator(1.0,0.));
+           blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(1.0,0.));
            blf_A.Assemble();
            blf_A.Finalize();
         
@@ -179,7 +179,7 @@ TEST(WouterIntegratorTest, ApproximationTest)
        EXPECT_LT(last_err, (std::pow(0.5,order)+0.01)*one_but_last_err);
    }
 }
-TEST(WouterIntegratorTest, ApproximationTestAsymmetricPenalty)
+TEST(ND_NitscheIntegratorTest, ApproximationTestAsymmetricPenalty)
 {
    double last_err;
    double one_but_last_err;
@@ -233,7 +233,7 @@ TEST(WouterIntegratorTest, ApproximationTestAsymmetricPenalty)
         
            // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
            mfem::BilinearForm blf_A(&ND);
-           blf_A.AddBdrFaceIntegrator(new WouterIntegrator(-1.0,100.));
+           blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-1.0,100.));
            blf_A.Assemble();
            blf_A.Finalize();
         
@@ -247,7 +247,7 @@ TEST(WouterIntegratorTest, ApproximationTestAsymmetricPenalty)
    }
 }
 
-TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient3)
+TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient3)
 {
    // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
    int refinements = 0;
@@ -299,7 +299,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient3)
 
    // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
    mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new WouterIntegrator(0.,0.));
+   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.,0.));
    blf_A.Assemble();
    blf_A.Finalize();
 
@@ -308,7 +308,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient3)
    ASSERT_NEAR(0., v * A_u, 1e-12);
 }
 
-TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient4)
+TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient4)
 {
    // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
    int refinements = 0;
@@ -345,7 +345,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient4)
 
    // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
    mfem::BilinearForm blf_A(&ND);
-   blf_A.AddBdrFaceIntegrator(new WouterIntegrator(0.,0.));
+   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0.,0.));
    blf_A.Assemble();
    blf_A.Finalize();
 
@@ -356,7 +356,7 @@ TEST(WouterIntegratorTest, DefaultsHaveNoCoefficient4)
 }
 
 
-TEST(WouterIntegratorTest, ConsistencyTest)
+TEST(ND_NitscheIntegratorTest, ConsistencyTest)
 {
    // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
    int refinements = 0;
@@ -396,7 +396,7 @@ TEST(WouterIntegratorTest, ConsistencyTest)
 
        // mfem::ConstantCoefficient mass_coeff(1.), diff_coef(viscosity);
        mfem::BilinearForm blf_A(&ND);
-       blf_A.AddBdrFaceIntegrator(new WouterIntegrator(theta, Cw));
+       blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(theta, Cw));
        blf_A.Assemble();
        blf_A.Finalize();
 
@@ -404,7 +404,7 @@ TEST(WouterIntegratorTest, ConsistencyTest)
        blf_A.Mult(u,blf_A_u);
 
        mfem::LinearForm f_lf(&ND);
-       f_lf.AddBdrFaceIntegrator(new WouterLFIntegrator(theta, Cw, u_coef));
+       f_lf.AddBdrFaceIntegrator(new ND_NitscheLFIntegrator(theta, Cw, u_coef));
        f_lf.Assemble();
        mfem::Vector dif(f_lf.Size());
        dif.Set(1.,f_lf);
@@ -416,7 +416,7 @@ TEST(WouterIntegratorTest, ConsistencyTest)
 }
 
 
-TEST(WouterIntegratorTest, rotationVanishingTest)
+TEST(ND_NitscheIntegratorTest, rotationVanishingTest)
 {
    // We computed <n x curl(u), v>_boundary for u = (xyz,xxz,xyy) and v=(xx+y,yy+z,zz+x). The exact solution is -3/4
    int refinements = 1;
@@ -488,7 +488,7 @@ TEST(WouterIntegratorTest, rotationVanishingTest)
    mfem::ConstantCoefficient one_coef(1.);
    mfem::BilinearForm blf_A(&ND);
    blf_A.AddDomainIntegrator(new mfem::CurlCurlIntegrator(one_coef));
-   blf_A.AddBdrFaceIntegrator(new WouterIntegrator(0., 0.));
+   blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(0., 0.));
    blf_A.Assemble();
    blf_A.Finalize();
    mfem::Vector blf_curlcurl_u(blf_A.Height()), blf_A_u(blf_A.Height());

@@ -199,7 +199,7 @@ public:
 
 
 
-class WouterIntegrator : public mfem::BilinearFormIntegrator
+class ND_NitscheIntegrator : public mfem::BilinearFormIntegrator
 {
 private:
     mfem::Vector vec, pointflux;
@@ -226,7 +226,7 @@ protected:
 
 public:
 
-    WouterIntegrator(double theta, double Cw, double factor = 1.) : factor_(factor), theta_(theta), Cw_(Cw)
+    ND_NitscheIntegrator(double theta, double Cw, double factor = 1.) : factor_(factor), theta_(theta), Cw_(Cw)
     {
         Q = NULL;
         DQ = NULL;
@@ -282,7 +282,7 @@ public:
     const mfem::Coefficient *GetCoefficient() const { return Q; }
 };
 
-class WouterLFIntegrator : public mfem::LinearFormIntegrator
+class ND_NitscheLFIntegrator : public mfem::LinearFormIntegrator
 {
    mfem::Vector shape;
    mfem::VectorCoefficient &Q;
@@ -291,7 +291,7 @@ class WouterLFIntegrator : public mfem::LinearFormIntegrator
 public:
    /** @brief Constructs a boundary integrator with a given Coefficient @a QG.
        Integration order will be @a a * basis_order + @a b. */
-   WouterLFIntegrator(double theta, double Cw, mfem::VectorCoefficient &QG, double factor = 1., int a = 1, int b = 1)
+   ND_NitscheLFIntegrator(double theta, double Cw, mfem::VectorCoefficient &QG, double factor = 1., int a = 1, int b = 1)
       : factor_(factor), theta_(theta), Cw_(Cw), Q(QG), oa(a), ob(b) { }
  
 
