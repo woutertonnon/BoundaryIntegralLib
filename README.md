@@ -22,16 +22,16 @@ cmake --build .
 
 ## Structure
 
--   `include/` -- public headers\
--   `src/` -- implementation\
--   `extern/` -- MFEM submodule\
+-   `include/` -- public headers
+-   `src/` -- implementation
+-   `extern/` -- MFEM submodule
 -   `tests/` -- optional GoogleTest tests
 
 ## Requirements
 
--   CMake\
--   C++ compiler\
--   MFEM (included as submodule)\
+-   CMake
+-   C++ compiler
+-   MFEM (included as submodule)
 -   GoogleTest (optional)
 
 ## Notes
