@@ -6,7 +6,7 @@
 void ND_NitscheIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
                                              mfem::DenseMatrix &elmat)
 {
-   return;
+   MFEM_ABORT("ND_NitscheIntegrator::AssembleElementMatrix(): method is not implemented for this class");
 }
 
 void ND_NitscheIntegrator::AssembleFaceMatrix(
@@ -86,7 +86,7 @@ void ND_NitscheIntegrator::AssembleFaceMatrix(
 void ND_NitscheLFIntegrator::AssembleRHSElementVect(
     const mfem::FiniteElement &el, mfem::ElementTransformation &Tr, mfem::Vector &elvect)
 {
-   return;
+   MFEM_ABORT("ND_NitscheIntegrator::AssembleRHSElementVect(): method is not implemented for this class");
 }
 
 void ND_NitscheLFIntegrator::AssembleRHSElementVect(
