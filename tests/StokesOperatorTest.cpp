@@ -2,6 +2,8 @@
 #include "mfem.hpp"
 #include "StokesOperator.hpp"
 
+using namespace StokesNitsche;
+
 TEST(StokesOperatorTest, StaticCondensationDoesNothing)
 {
     const unsigned int n = 4;
@@ -13,23 +15,28 @@ TEST(StokesOperatorTest, StaticCondensationDoesNothing)
         n, n, n, mfem::Element::TETRAHEDRON
     );
 
-    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+    std::shared_ptr<mfem::Mesh> mesh_ptr =
+        std::make_unique<mfem::Mesh>(
+            std::move(mesh)
+        );
+    StokesNitscheOperator op(mesh_ptr,
+                             theta, penalty, factor);
 
-    const std::array<const mfem::FiniteElementSpace, 3>
+    const std::array<const mfem::FiniteElementSpace*, 3>
         fespaces({
-            op.getH1(), op.getHCurl(), op.getHDivOrL2()
+            &op.getH1Space(), &op.getHCurlSpace(), &op.getHDivOrL2Space()
         });
 
-    for(const auto& fes: fespaces)
+    for(const auto fes: fespaces)
     {
         // Does not accept const mfem::FiniteElementSpace*
         // But it is fine, we never use it again, so no UB (I hope)
         auto static_condensation = mfem::StaticCondensation(
-            const_cast<mfem::FiniteElementSpace*>(&fes)
+            const_cast<mfem::FiniteElementSpace*>(fes)
         );
 
         ASSERT_EQ(static_condensation.GetNPrDofs(), 0);
-        ASSERT_EQ(static_condensation.GetNExDofs(), fes.GetNDofs());
+        ASSERT_EQ(static_condensation.GetNExDofs(), fes->GetNDofs());
         ASSERT_FALSE(static_condensation.ReducesTrueVSize());
     }
 }
@@ -45,16 +52,21 @@ TEST(StokesOperatorTest, NoLocalInteriorDOF)
         n, n, n, mfem::Element::TETRAHEDRON
     );
 
-    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+    std::shared_ptr<mfem::Mesh> mesh_ptr =
+        std::make_unique<mfem::Mesh>(
+            std::move(mesh)
+        );
+    StokesNitscheOperator op(mesh_ptr,
+                             theta, penalty, factor);
 
-    const std::array<const mfem::FiniteElementSpace, 3>
+    const std::array<const mfem::FiniteElementSpace*, 3>
         fespaces({
-            op.getH1(), op.getHCurl(), op.getHDivOrL2()
+            &op.getH1Space(), &op.getHCurlSpace(), &op.getHDivOrL2Space()
         });
 
-    for(const auto& fes: fespaces)
-        for(unsigned int k = 0; k < fes.GetNE(); ++k)
-            ASSERT_EQ(fes.GetNumElementInteriorDofs(k), 0);
+    for(const auto fes: fespaces)
+        for(int k = 0; k < fes->GetNE(); ++k)
+            ASSERT_EQ(fes->GetNumElementInteriorDofs(k), 0);
 }
 
 TEST(StokesOperatorTest, MatrixRegularityGalerkin)
@@ -68,9 +80,14 @@ TEST(StokesOperatorTest, MatrixRegularityGalerkin)
         n, n, n, mfem::Element::TETRAHEDRON
     );
 
-    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+    std::shared_ptr<mfem::Mesh> mesh_ptr =
+        std::make_unique<mfem::Mesh>(
+            std::move(mesh)
+        );
+    StokesNitscheOperator op(mesh_ptr,
+                             theta, penalty, factor);
 
-    ASSERT_EQ(op.getOperatorMode(), StokesNitsche::GALERKIN);
+    ASSERT_EQ(op.getOperatorMode(), OperatorMode::Galerkin);
     std::unique_ptr<mfem::SparseMatrix> A = op.getFullGalerkinSystem();
 
     mfem::Vector ew;
@@ -98,11 +115,16 @@ TEST(StokesOperatorTest, MatrixRegularityDEC)
         n, n, n, mfem::Element::TETRAHEDRON
     );
 
-    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+    std::shared_ptr<mfem::Mesh> mesh_ptr =
+        std::make_unique<mfem::Mesh>(
+            std::move(mesh)
+        );
+    StokesNitscheOperator op(mesh_ptr, theta, penalty, factor,
+                             MassLumping::Diagonal);
 
     op.setDECMode();
 
-    ASSERT_EQ(op.getOperatorMode(), StokesNitsche::DEC);
+    ASSERT_EQ(op.getOperatorMode(), OperatorMode::DEC);
     std::unique_ptr<mfem::SparseMatrix> A = op.getFullDECSystem();
 
     mfem::Vector ew;
@@ -133,9 +155,14 @@ TEST(StokesOperatorTest, OperatorGalerkin)
     const int nv = mesh.GetNV(),
               ne = mesh.GetNEdges();
 
-    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+    std::shared_ptr<mfem::Mesh> mesh_ptr =
+        std::make_unique<mfem::Mesh>(
+            std::move(mesh)
+        );
+    StokesNitscheOperator op(mesh_ptr,
+                             theta, penalty, factor);
 
-    ASSERT_EQ(op.getOperatorMode(), StokesNitsche::GALERKIN);
+    ASSERT_EQ(op.getOperatorMode(), OperatorMode::Galerkin);
 
     std::unique_ptr<mfem::SparseMatrix> A = op.getFullSystem();
 
@@ -151,7 +178,7 @@ TEST(StokesOperatorTest, OperatorGalerkin)
 
     mfem::Vector y_extended(ne + nv + 1);
     A->Mult(x_, y_extended);
-    
+
     ASSERT_NEAR(y_extended(ne + nv), 0, 1e-12);
     y_mat.MakeRef(y_extended, 0, ne + nv);
 
@@ -173,12 +200,18 @@ TEST(StokesOperatorTest, OperatorDEC)
     );
 
     const int nv = mesh.GetNV(),
-    ne = mesh.GetNEdges();
+              ne = mesh.GetNEdges();
 
-    StokesNitsche::StokesNitscheOperator op(mesh, theta, penalty, factor);
+    std::shared_ptr<mfem::Mesh> mesh_ptr =
+        std::make_unique<mfem::Mesh>(
+            std::move(mesh)
+        );
+    StokesNitscheOperator op(mesh_ptr,
+                             theta, penalty, factor,
+                             MassLumping::Diagonal);
     op.setDECMode();
 
-    ASSERT_EQ(op.getOperatorMode(), StokesNitsche::DEC);
+    ASSERT_EQ(op.getOperatorMode(), OperatorMode::DEC);
 
     std::unique_ptr<mfem::SparseMatrix> A = op.getFullSystem();
 
@@ -194,7 +227,7 @@ TEST(StokesOperatorTest, OperatorDEC)
 
     mfem::Vector y_extended(ne + nv + 1);
     A->Mult(x_, y_extended);
-    
+
     ASSERT_NEAR(y_extended(ne + nv), 0, 1e-12);
     y_mat.MakeRef(y_extended, 0, ne + nv);
 

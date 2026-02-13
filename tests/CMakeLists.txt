@@ -21,6 +21,10 @@ add_executable(stokesoperator_tests
 add_executable(stokesdgs_tests
     StokesDGSTest.cpp
 )
+add_executable(stokesmg_tests
+    StokesMGTest.cpp
+)
+
 
 target_link_libraries(incidence_tests
     PRIVATE
@@ -80,6 +84,21 @@ target_link_libraries(stokesdgs_tests
     PRIVATE
         mfem
         stokesdgs
+        # Prefer imported targets when available (CMake >= 3.5)
+        $<$<TARGET_EXISTS:GTest::gtest>:GTest::gtest>
+        $<$<TARGET_EXISTS:GTest::gtest_main>:GTest::gtest_main>
+        # Fallback for older FindGTest modules
+        ${GTEST_LIBRARIES}
+        ${GTEST_MAIN_LIBRARIES}
+        pthread
+)
+
+target_link_libraries(stokesmg_tests
+    PRIVATE
+        stokesoperator
+        stokesdgs
+        stokesmg
+        mfem
         # Prefer imported targets when available (CMake >= 3.5)
         $<$<TARGET_EXISTS:GTest::gtest>:GTest::gtest>
         $<$<TARGET_EXISTS:GTest::gtest_main>:GTest::gtest_main>
