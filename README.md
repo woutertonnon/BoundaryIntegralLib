@@ -1,4 +1,4 @@
-# BoundaryIntegralLib (cleanup)
+# BoundaryIntegralLib
 
 Small C++ library providing custom MFEM boundary / jump integrators.
 
