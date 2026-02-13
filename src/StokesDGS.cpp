@@ -125,7 +125,7 @@ StokesNitscheDGS::StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
     if (op->getOperatorMode() != OperatorMode::DEC)
         MFEM_ABORT("StokesNitscheDGS: OperatorMode != DEC");
     if (op->getMassLumping() == MassLumping::None)
-        MFEM_ABORT("StokesNitscheDGS: MassLumping == NO_MASS_LUMPING");
+        MFEM_ABORT("StokesNitscheDGS: MassLumping is None");
 
     initTransformation();
     initTransformedSystem();

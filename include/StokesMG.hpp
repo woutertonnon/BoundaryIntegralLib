@@ -41,6 +41,11 @@ public:
 
     void setCycleType(const MGCycleType type);
 
+    // Set the mode of the input system.
+    // If Galerkin: Input 'b' is scaled by M_lumped^{-1} before the MG cycle.
+    // If DEC: Input 'b' is used as-is.
+    void setOperatorMode(const OperatorMode mode);
+
     // --- MFEM Overrides ---
 
     void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
@@ -58,6 +63,7 @@ public:
     MassLumping getMassLumping() const { return ml_; }
     SmootherType getSmootherType() const { return st_; }
     int getNumLevels() const { return static_cast<int>(levels_.size()); }
+    OperatorMode getOperatorMode() const { return mode_; }
 
 private:
     struct Level
@@ -109,6 +115,10 @@ private:
     int pre_smooth_ = 1;
     int post_smooth_ = 1;
     MGCycleType cycle_type_ = MGCycleType::VCycle;
+
+    // Default to DEC (expects point-values/pre-scaled inputs).
+    OperatorMode mode_ = OperatorMode::DEC;
+    mutable mfem::Vector b_scaled_; // Temporary vector for Galerkin scaling
 
     void cycle(const int level_idx,
                const mfem::Vector& b,

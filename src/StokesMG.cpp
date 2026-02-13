@@ -225,7 +225,55 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
     if (!iterative_mode)
         x = 0.0;
 
-    cycle(static_cast<int>(levels_.size()) - 1, b, x);
+    // Handle Preconditioning Logic
+    if (mode_ == OperatorMode::Galerkin)
+    {
+        // In Galerkin mode, 'b' is in the dual space (integrated against test functions).
+        // The MG cycle (DEC) expects 'b' to be coefficients/point-values.
+        // Transform: b_scaled = M^{-1} * b
+
+        b_scaled_.SetSize(b.Size());
+
+        const auto& finest_op = getFinestOperator();
+        const mfem::Vector& M_u = finest_op.getMassHCurlLumped();
+        const mfem::Vector& M_p = finest_op.getMassH1Lumped();
+        const mfem::Array<int>& offsets = finest_op.getOffsets();
+
+        const int nv = finest_op.getMesh().GetNV(),
+                  ne = finest_op.getMesh().GetNEdges();
+
+        const mfem::Vector b_u(b.GetData(), ne);
+        const mfem::Vector b_p(b.GetData() + ne, nv);
+
+        mfem::Vector b_scaled_u(b_scaled_.GetData(), ne);
+        mfem::Vector b_scaled_p(b_scaled_.GetData() + ne, nv);
+
+        b_scaled_u = b_u;
+        b_scaled_u /= M_u;
+
+        b_scaled_p = b_p;
+        b_scaled_p /= M_p;
+
+        // 1. Scale Velocity Part
+        // Assuming offsets[0]=0, offsets[1]=size_u, offsets[2]=size_u+size_p
+        // int u_size = offsets[1] - offsets[0];
+        // for (int i = 0; i < u_size; ++i)
+            // b_scaled_[i] = b[i] / M_u[i];
+
+        // 2. Scale Pressure Part
+        // int p_start = offsets[1];
+        // int p_size = offsets[2] - offsets[1];
+        // for (int i = 0; i < p_size; ++i)
+        //     b_scaled_[p_start + i] = b[p_start + i] / M_p[i];
+
+        // Run cycle with scaled RHS
+        cycle(static_cast<int>(levels_.size()) - 1, b_scaled_, x);
+    }
+    else
+    {
+        // DEC Mode: 'b' is already in the correct form
+        cycle(static_cast<int>(levels_.size()) - 1, b, x);
+    }
 }
 
 void StokesMG::SetOperator(const mfem::Operator&)
@@ -247,6 +295,11 @@ void StokesMG::setSmoothIterations(const int pre, const int post)
 void StokesMG::setCycleType(const MGCycleType type)
 {
     cycle_type_ = type;
+}
+
+void StokesMG::setOperatorMode(const OperatorMode mode)
+{
+    mode_ = mode;
 }
 
 // --- Getters Implementation ---
