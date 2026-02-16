@@ -116,7 +116,10 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
 
       // Face normal at this quadrature point
       mfem::CalcOrtho(Tr.Face->Jacobian(), normal);
-      double h = sqrt(normal.Norml2());
+      double area = normal.Norml2();
+      double h = sqrt(area);
+      normal *= 1./area;
+
       mfem::DenseMatrix shape(el.GetDof(), Tr.GetSpaceDim());
       mfem::DenseMatrix curl_shape(el.GetDof(), 3);
 
@@ -126,7 +129,6 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
 
       mfem::Vector temp_out(3);
       Tr.Transform(ip_face,temp_out);
-
 
       mfem::Vector u(3);
       Q.Eval(u,Tr,ip_face);
@@ -146,8 +148,8 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
          normal.cross3D(v,n_x_v);
          normal.cross3D(u,n_x_u);
 
-         elvect.Elem(k) += factor_ * theta_ * weights[i] * (u * n_x_curl_v);
-         elvect.Elem(k) += factor_ * Cw_/(h*h*h) * weights[i]* (n_x_u * n_x_v);
+         elvect.Elem(k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
+         elvect.Elem(k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
 
       } 
    }

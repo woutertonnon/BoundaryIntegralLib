@@ -62,15 +62,22 @@ TEST(ND_NitscheIntegratorTest, ThirdOrderExactIntegral)
       ASSERT_NEAR(v.ComputeL2Error(v_coef),0.,tol);
 
       mfem::BilinearForm blf_A(&ND);
-      blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-2., 0.));
+      blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(theta, 0.));
       blf_A.Assemble();
+
+      mfem::LinearForm lf_u(&ND);
+      lf_u.AddBdrFaceIntegrator(new ND_NitscheLFIntegrator(theta, 0.,u_coef));
+      lf_u.Assemble();
       
       mfem::Vector A_u(blf_A.Height());
       blf_A.Mult(u, A_u);
       ASSERT_FLOAT_EQ(3., v * A_u)
-         << " order=" << order << " mesh=" << meshfile << "\n";
+         << "BilinearForm not correctly computed for order=" << order << " mesh=" << meshfile << "\n";
+      ASSERT_FLOAT_EQ(2., v * lf_u)
+         << "LinearForm not correctly computed for order=" << order << " mesh=" << meshfile << "\n";
    }
 }
+
 
 
 TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient)
