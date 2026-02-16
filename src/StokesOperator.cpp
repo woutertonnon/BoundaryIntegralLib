@@ -102,7 +102,7 @@ void StokesNitscheOperator::initNitsche(const double theta,
     nitsche_ = std::make_unique<mfem::BilinearForm>(hcurl_space_.get());
 
     nitsche_->AddBdrFaceIntegrator(
-        new WouterIntegrator(theta, penalty, factor)
+        new ND_NitscheIntegrator(theta, penalty, factor)
     );
 
     nitsche_->Assemble();

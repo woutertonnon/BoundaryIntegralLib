@@ -1,13 +1,13 @@
 #include "BoundaryOperators.hpp"
 #include "mfem.hpp"
 
-void WouterIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
+void ND_NitscheIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
                                              mfem::DenseMatrix &elmat)
 {
-   return;
+   MFEM_ABORT("ND_NitscheIntegrator::AssembleElementMatrix(): method is not implemented for this class");
 }
 
-void WouterIntegrator::AssembleFaceMatrix(
+void ND_NitscheIntegrator::AssembleFaceMatrix(
     const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
     mfem::FaceElementTransformations &Trans, mfem::DenseMatrix &elmat)
 {
@@ -40,8 +40,10 @@ void WouterIntegrator::AssembleFaceMatrix(
       // Face normal atu this quadrature point
       Trans.Face->SetIntPoint(&ip_face);
       mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
-      double h = sqrt(normal.Norml2());
+
       double area = normal.Norml2();
+      double h = sqrt(area);
+      normal *= 1./area; //normalize n
 
       mfem::DenseMatrix shape(el1.GetDof(), Trans.GetSpaceDim());
       mfem::DenseMatrix curl_shape(el1.GetDof(), 3);
@@ -57,12 +59,10 @@ void WouterIntegrator::AssembleFaceMatrix(
       for (int l = 0; l < el1.GetDof(); l++)
          for (int k = 0; k < el1.GetDof(); k++)
          {
-            // Extract u and v
             mfem::Vector u(dim), v(dim);
             shape.GetRow(k, u);
             shape.GetRow(l, v);
-	    
-            // Extract curl(u) and curl(v)
+
             mfem::Vector curl_u(dim), curl_v(dim);
             curl_shape.GetRow(k, curl_u);
             curl_shape.GetRow(l, curl_v);
@@ -73,21 +73,21 @@ void WouterIntegrator::AssembleFaceMatrix(
             normal.cross3D(u,n_x_u);
             normal.cross3D(v,n_x_v);
 
-            elmat.Elem(l,k) += factor_ * weights[i] * (n_x_curl_u * v);
-            elmat.Elem(l,k) += factor_ * theta_ * weights[i] * (u * n_x_curl_v);
-            elmat.Elem(l,k) += factor_ * Cw_/(h*h*h) * weights[i]* (n_x_u * n_x_v);
+            elmat.Elem(l,k) += factor_ * weights[i] * area * (n_x_curl_u * v);
+            elmat.Elem(l,k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
+            elmat.Elem(l,k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
 
-         } 
+         }
    }
 }
 
-void WouterLFIntegrator::AssembleRHSElementVect(
+void ND_NitscheLFIntegrator::AssembleRHSElementVect(
     const mfem::FiniteElement &el, mfem::ElementTransformation &Tr, mfem::Vector &elvect)
 {
-   return;
+   MFEM_ABORT("ND_NitscheIntegrator::AssembleRHSElementVect(): method is not implemented for this class");
 }
 
-void WouterLFIntegrator::AssembleRHSElementVect(
+void ND_NitscheLFIntegrator::AssembleRHSElementVect(
     const mfem::FiniteElement &el, mfem::FaceElementTransformations &Tr, mfem::Vector &elvect)
 {
    int dim = el.GetDim();
@@ -114,7 +114,10 @@ void WouterLFIntegrator::AssembleRHSElementVect(
 
       // Face normal at this quadrature point
       mfem::CalcOrtho(Tr.Face->Jacobian(), normal);
-      double h = sqrt(normal.Norml2());
+      double area = normal.Norml2();
+      double h = sqrt(area);
+      normal *= 1./area;
+
       mfem::DenseMatrix shape(el.GetDof(), Tr.GetSpaceDim());
       mfem::DenseMatrix curl_shape(el.GetDof(), 3);
 
@@ -124,7 +127,6 @@ void WouterLFIntegrator::AssembleRHSElementVect(
 
       mfem::Vector temp_out(3);
       Tr.Transform(ip_face,temp_out);
-
 
       mfem::Vector u(3);
       Q.Eval(u,Tr,ip_face);
@@ -144,10 +146,10 @@ void WouterLFIntegrator::AssembleRHSElementVect(
          normal.cross3D(v,n_x_v);
          normal.cross3D(u,n_x_u);
 
-         elvect.Elem(k) += factor_ * theta_ * weights[i] * (u * n_x_curl_v);
-         elvect.Elem(k) += factor_ * Cw_/(h*h*h) * weights[i]* (n_x_u * n_x_v);
+         elvect.Elem(k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
+         elvect.Elem(k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
 
-      } 
+      }
    }
 
 
