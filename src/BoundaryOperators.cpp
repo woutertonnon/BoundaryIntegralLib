@@ -42,8 +42,10 @@ void ND_NitscheIntegrator::AssembleFaceMatrix(
       // Face normal atu this quadrature point
       Trans.Face->SetIntPoint(&ip_face);
       mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
-      double h = sqrt(normal.Norml2());
+      
       double area = normal.Norml2();
+      double h = sqrt(area);
+      normal *= 1./area; //normalize n
 
       mfem::DenseMatrix shape(el1.GetDof(), Trans.GetSpaceDim());
       mfem::DenseMatrix curl_shape(el1.GetDof(), 3);
@@ -59,12 +61,10 @@ void ND_NitscheIntegrator::AssembleFaceMatrix(
       for (int l = 0; l < el1.GetDof(); l++)
          for (int k = 0; k < el1.GetDof(); k++)
          {
-            // Extract u and v
             mfem::Vector u(dim), v(dim);
             shape.GetRow(k, u);
             shape.GetRow(l, v);
 	    
-            // Extract curl(u) and curl(v)
             mfem::Vector curl_u(dim), curl_v(dim);
             curl_shape.GetRow(k, curl_u);
             curl_shape.GetRow(l, curl_v);
@@ -75,9 +75,9 @@ void ND_NitscheIntegrator::AssembleFaceMatrix(
             normal.cross3D(u,n_x_u);
             normal.cross3D(v,n_x_v);
 
-            elmat.Elem(l,k) += factor_ * weights[i] * (n_x_curl_u * v);
-            elmat.Elem(l,k) += factor_ * theta_ * weights[i] * (u * n_x_curl_v);
-            elmat.Elem(l,k) += factor_ * Cw_/(h*h*h) * weights[i]* (n_x_u * n_x_v);
+            elmat.Elem(l,k) += factor_ * weights[i] * area * (n_x_curl_u * v);
+            elmat.Elem(l,k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
+            elmat.Elem(l,k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
 
          } 
    }

@@ -8,6 +8,71 @@
 #include <memory>
 #include <vector>
 
+TEST(ND_NitscheIntegratorTest, ThirdOrderExactIntegral)
+{
+   // Checks <n x curl(u), v> + theta * <u, n x curl(v)> with u=(z,-z*z,y) with theta = -2, v=(y*y,x,1);
+   //  exact value is 3. Runs on two meshes, projects u and v into an ND space, assembles 
+   // ND_NitscheIntegrator(theta,0.), then verifies v^T (A u) == 3 (prints context on failure).
+
+   double tol = 1e-12;
+   int order = 3;
+   double theta = -2.;
+
+   std::vector<std::string> meshfiles{
+      "../tests/mesh/ref-cube.mesh",
+      "../tests/mesh/LidDrivenCavity3D.msh"
+   };
+
+   auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
+   {
+      double X = x.Elem(0);
+      double Y = x.Elem(1);
+      double Z = x.Elem(2);
+      y.Elem(0) = Z;
+      y.Elem(1) = -Z*Z;
+      y.Elem(2) = Y;
+   };
+   auto v_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void
+   {
+      double X = x.Elem(0);
+      double Y = x.Elem(1);
+      double Z = x.Elem(2);
+      y.Elem(0) = Y*Y;
+      y.Elem(1) = X;
+      y.Elem(2) = 1.;
+   };
+   mfem::VectorFunctionCoefficient u_coef(3, u_func);
+   mfem::VectorFunctionCoefficient v_coef(3, v_func);
+
+   for (std::string meshfile : meshfiles)
+   {
+      const int n = 1;
+
+      mfem::Mesh mesh(meshfile);
+      int dim = mesh.Dimension();
+      mfem::FiniteElementCollection *fec_ND = new mfem::ND_FECollection(order, dim);
+      mfem::FiniteElementSpace ND(&mesh, fec_ND);
+      mfem::GridFunction u(&ND), v(&ND);
+
+      u.ProjectCoefficient(u_coef);
+      v.ProjectCoefficient(v_coef);
+
+      // u and v should be exact representatives
+      ASSERT_NEAR(u.ComputeL2Error(u_coef),0.,tol);
+      ASSERT_NEAR(v.ComputeL2Error(v_coef),0.,tol);
+
+      mfem::BilinearForm blf_A(&ND);
+      blf_A.AddBdrFaceIntegrator(new ND_NitscheIntegrator(-2., 0.));
+      blf_A.Assemble();
+      
+      mfem::Vector A_u(blf_A.Height());
+      blf_A.Mult(u, A_u);
+      ASSERT_FLOAT_EQ(3., v * A_u)
+         << " order=" << order << " mesh=" << meshfile << "\n";
+   }
+}
+
+
 TEST(ND_NitscheIntegratorTest, DefaultsHaveNoCoefficient)
 {
    // Exact-value regression for <n x curl(u), v>_∂Ω with theta=0, Cw=0.
