@@ -19,7 +19,6 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
 {
     iterative_mode = true;
 
-    // 1. Create Level 0 Operator
     auto op = std::make_shared<StokesNitscheOperator>(
         coarse_mesh, theta_, penalty_, factor_, ml_
     );
@@ -35,12 +34,9 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
         )
     );
 
-    // 2. Setup Default Coarse Solver (UMFPACK)
 #ifdef MFEM_USE_SUITESPARSE
-    // We must persist the matrix because UMFPACK expects it to stay alive.
     coarse_mat_ = levels_[0]->op->getFullSystem();
 
-    // Initialize extended vectors if the system is larger (e.g. pressure constraint)
     if (coarse_mat_->NumRows() > height)
     {
         coarse_b_ext_.SetSize(coarse_mat_->NumRows());
@@ -49,9 +45,7 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
         coarse_x_ext_ = 0.0;
     }
 
-    umf_solver_ = std::make_unique<mfem::UMFPackSolver>();
-    umf_solver_->Control[UMFPACK_ORDERING] = UMFPACK_ORDERING_METIS;
-    umf_solver_->SetOperator(*coarse_mat_);
+    umf_solver_ = std::make_unique<mfem::UMFPackSolver>(*coarse_mat_);
 #else
     mfem::out << "Warning: StokesMG: MFEM not built with SuiteSparse. "
               << "Defaulting to smoothing for coarse solve." << std::endl;
@@ -108,12 +102,13 @@ void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
         return R_mat;
     };
 
-    // Velocity Transfer (HCurl)
     {
         mfem::OperatorPtr P_u(mfem::Operator::MFEM_SPARSEMAT);
         fine.getHCurlSpace().GetTransferOperator(coarse.getHCurlSpace(), P_u);
         P_u.SetOperatorOwner(false);
 
+        // We set the type to mfem::Operator::MFEM_SPARSEMAT, so
+        // we can safely upcast
         auto* P_u_mat = dynamic_cast<mfem::SparseMatrix*>(P_u.Ptr());
         mfem::SparseMatrix* R_u_mat = CreateL2Dual(*P_u_mat,
                                                    fine.getMassHCurlLumped(),
@@ -122,7 +117,6 @@ void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
         R_block->SetBlock(0, 0, R_u_mat);
     }
 
-    // Pressure Transfer (H1)
     {
         mfem::OperatorPtr P_p(mfem::Operator::MFEM_SPARSEMAT);
         fine.getH1Space().GetTransferOperator(coarse.getH1Space(), P_p);
@@ -148,7 +142,6 @@ void StokesMG::cycle(const int level_idx,
 {
     const Level& lvl = *levels_[level_idx];
 
-    // Coarsest Grid Solve
     if (level_idx == 0)
     {
         if (coarse_solver_)
@@ -158,61 +151,46 @@ void StokesMG::cycle(const int level_idx,
 #ifdef MFEM_USE_SUITESPARSE
         else if (umf_solver_)
         {
-            // If the matrix is extended (constraint added), we map b -> b_ext
             if (coarse_b_ext_.Size() > 0)
             {
-                // 1. Pad input: copy b (small) into b_ext (large)
                 coarse_b_ext_ = 0.0;
                 coarse_b_ext_.SetVector(b, 0);
-
                 umf_solver_->Mult(coarse_b_ext_, coarse_x_ext_);
-
-                // 2. Extract solution: copy only the first 'x.Size()' elements
-                // Create a view of the extended vector limited to the original size
                 mfem::Vector x_view(coarse_x_ext_.GetData(), x.Size());
                 x = x_view;
             }
             else
             {
-                // Normal solve (sizes match)
                 umf_solver_->Mult(b, x);
             }
         }
 #endif
-        else
+        else // fallback to a few smoothening interations as the coarse solve
         {
-            // Fallback to smoothing
             for (int i = 0; i < pre_smooth_ + post_smooth_; ++i)
                 lvl.smoother->Mult(b, x);
         }
         return;
     }
 
-    // 1. Pre-smoothing
     for (int i = 0; i < pre_smooth_; ++i)
         lvl.smoother->Mult(b, x);
 
-    // 2. Compute Residual: r = b - Ax
     lvl.res = b;
     lvl.op->AddMult(x, lvl.res, -1.0);
 
-    // 3. Restriction: b_coarse = R * r
     Level& coarse_lvl = *levels_[level_idx - 1];
     lvl.R->Mult(lvl.res, coarse_lvl.b);
 
-    // 4. Coarse Grid Correction
     coarse_lvl.x = 0.0;
-
     cycle(level_idx - 1, coarse_lvl.b, coarse_lvl.x);
 
     if (cycle_type_ == MGCycleType::WCycle)
         cycle(level_idx - 1, coarse_lvl.b, coarse_lvl.x);
 
-    // 5. Prolongation: x += P * x_coarse
     lvl.P->Mult(coarse_lvl.x, lvl.res);
     x += lvl.res;
 
-    // 6. Post-smoothing
     for (int i = 0; i < post_smooth_; ++i)
         lvl.smoother->Mult(b, x);
 }
@@ -225,19 +203,13 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
     if (!iterative_mode)
         x = 0.0;
 
-    // Handle Preconditioning Logic
     if (mode_ == OperatorMode::Galerkin)
     {
-        // In Galerkin mode, 'b' is in the dual space (integrated against test functions).
-        // The MG cycle (DEC) expects 'b' to be coefficients/point-values.
-        // Transform: b_scaled = M^{-1} * b
-
         b_scaled_.SetSize(b.Size());
 
         const auto& finest_op = getFinestOperator();
         const mfem::Vector& M_u = finest_op.getMassHCurlLumped();
         const mfem::Vector& M_p = finest_op.getMassH1Lumped();
-        const mfem::Array<int>& offsets = finest_op.getOffsets();
 
         const int nv = finest_op.getMesh().GetNV(),
                   ne = finest_op.getMesh().GetNEdges();
@@ -254,24 +226,10 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
         b_scaled_p = b_p;
         b_scaled_p /= M_p;
 
-        // 1. Scale Velocity Part
-        // Assuming offsets[0]=0, offsets[1]=size_u, offsets[2]=size_u+size_p
-        // int u_size = offsets[1] - offsets[0];
-        // for (int i = 0; i < u_size; ++i)
-            // b_scaled_[i] = b[i] / M_u[i];
-
-        // 2. Scale Pressure Part
-        // int p_start = offsets[1];
-        // int p_size = offsets[2] - offsets[1];
-        // for (int i = 0; i < p_size; ++i)
-        //     b_scaled_[p_start + i] = b[p_start + i] / M_p[i];
-
-        // Run cycle with scaled RHS
         cycle(static_cast<int>(levels_.size()) - 1, b_scaled_, x);
     }
     else
     {
-        // DEC Mode: 'b' is already in the correct form
         cycle(static_cast<int>(levels_.size()) - 1, b, x);
     }
 }
@@ -301,8 +259,6 @@ void StokesMG::setOperatorMode(const OperatorMode mode)
 {
     mode_ = mode;
 }
-
-// --- Getters Implementation ---
 
 const StokesNitscheOperator& StokesMG::getOperator(const int level) const
 {
