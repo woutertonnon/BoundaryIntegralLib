@@ -45,7 +45,10 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
         coarse_x_ext_ = 0.0;
     }
 
-    umf_solver_ = std::make_unique<mfem::UMFPackSolver>(*coarse_mat_);
+    umf_solver_ = std::make_unique<mfem::UMFPackSolver>();
+    umf_solver_->SetOperator(*coarse_mat_);
+    MFEM_ASSERT(umf_solver_->Info[UMFPACK_STATUS] == UMFPACK_OK,
+                "StokesMG::StokesMG: coarse factorization failed.");
 #else
     mfem::out << "Warning: StokesMG: MFEM not built with SuiteSparse. "
               << "Defaulting to smoothing for coarse solve." << std::endl;
@@ -198,7 +201,7 @@ void StokesMG::cycle(const int level_idx,
 void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
 {
     if (levels_.empty())
-        MFEM_ABORT("StokesMG: No levels defined.");
+        MFEM_ABORT("StokesMG::Mult: No levels defined.");
 
     if (!iterative_mode)
         x = 0.0;
@@ -236,7 +239,7 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
 
 void StokesMG::SetOperator(const mfem::Operator&)
 {
-    MFEM_ABORT("StokesMG: Use addRefinedLevel to manage the hierarchy.");
+    MFEM_ABORT("StokesMG::SetOperator: Use addRefinedLevel to manage the hierarchy.");
 }
 
 void StokesMG::setCoarseSolver(std::shared_ptr<const mfem::Solver> solver)

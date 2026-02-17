@@ -19,8 +19,8 @@ TEST(ND_NitscheIntegratorTest, ThirdOrderExactIntegral)
    double theta = -2.;
 
    std::vector<std::string> meshfiles{
+      // "../extern/mfem/data/tinyzoo-3d.mesh",
       "../extern/mfem/data/ref-cube.mesh"
-      // "../tests/mesh/LidDrivenCavity3D.msh"
    };
 
    auto u_func = [](const mfem::Vector &x, double, mfem::Vector &y) -> void

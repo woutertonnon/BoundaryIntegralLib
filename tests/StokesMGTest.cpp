@@ -5,13 +5,14 @@
 #include "StokesOperator.hpp"
 #include "StokesMG.hpp"
 
-// Helper function that performs a standalone Multigrid V-Cycle test on a given mesh.
-// It builds the MG hierarchy, sets up a random linear system, and iteratively checks
-// if the residual norm decreases below a tolerance within 128 cycles.
-void RunVCycleTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
-                   const double tol = 1e-6,
-                   const double penalty = 9.0,
-                   const int refinements = 4)
+// Helper function that tests both V-Cycle convergence and GMRES preconditioning.
+// 1. Sets up the MG hierarchy.
+// 2. Runs a standalone V-Cycle convergence test.
+// 3. Reconfigures the MG solver to Galerkin mode and runs a GMRES convergence test.
+void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
+                     const int refinements = 4,
+                     const double penalty = 10.0,
+                     const double tol = 1e-6)
 {
 #ifdef MFEM_USE_SUITESPARSE
     std::cout << "Using SuiteSparse for Coarse Grid Solve" << std::endl;
@@ -19,18 +20,27 @@ void RunVCycleTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
     const double theta = 1.0, factor = 1.0;
 
+    // 1. Initialize MG Solver & Hierarchy
     StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor);
 
     for (int i = 0; i < refinements; ++i)
         mg.addRefinedLevel();
 
     const auto& fine_op = mg.getFinestOperator();
-
     const int num_rows = fine_op.NumRows();
-    mfem::Vector x_exact(num_rows), b(num_rows),
-                 x_sol(num_rows), residual(num_rows);
 
+    std::cout << "NDof = " << num_rows << std::endl;
+
+    // Shared vectors
+    mfem::Vector x_exact(num_rows), b(num_rows), x_sol(num_rows), residual(num_rows);
     x_exact.Randomize(1);
+
+    // =======================================================
+    // PHASE 1: Standalone V-Cycle Convergence
+    // =======================================================
+    std::cout << "\n[Phase 1] Running Standalone V-Cycle Test..." << std::endl;
+
+    // Setup System for V-Cycle
     fine_op.Mult(x_exact, b);
     x_sol = 0.0;
 
@@ -40,8 +50,7 @@ void RunVCycleTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     double initial_norm = 0.0;
     const int max_iter = 128;
 
-    std::cout << "NDof = " << fine_op.NumRows() << std::endl;
-    std::cout << "\n  Iter | Rel. Residual \n-------|---------------\n";
+    std::cout << "  Iter | Rel. Residual \n-------|---------------\n";
 
     for (int iter = 0; iter < max_iter; ++iter)
     {
@@ -60,114 +69,122 @@ void RunVCycleTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
         mg.Mult(b, x_sol);
     }
 
+    // V-Cycle Final Check
     residual = b;
     fine_op.AddMult(x_sol, residual, -1.0);
-    double final_rel_norm = residual.Norml2() / initial_norm;
+    double vcycle_final_rel_norm = residual.Norml2() / initial_norm;
 
-    ASSERT_LT(final_rel_norm, tol)
-        << "MG V-Cycle failed to converge within tolerance.";
-}
+    ASSERT_LT(vcycle_final_rel_norm, tol)
+        << "Phase 1 Failed: MG V-Cycle failed to converge within tolerance.";
 
-// Helper function that tests GMRES convergence using MG as a preconditioner.
-// It constructs a Galerkin operator on the finest level and validates that the
-// preconditioned GMRES solver converges to the exact solution within the tolerance.
-void RunGMRESTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
-                  const double tol = 1e-6,
-                  const double penalty = 9.0,
-                  const int refinements = 4)
-{
-#ifdef MFEM_USE_SUITESPARSE
-    std::cout << "Using SuiteSparse for Coarse Grid Solve" << std::endl;
-#endif
+    std::cout << "Phase 1 Passed." << std::endl;
 
-    const double theta = 1.0, factor = 1.0;
 
-    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor);
+    // =======================================================
+    // PHASE 2: GMRES with Galerkin MG Preconditioner
+    // =======================================================
+    std::cout << "\n[Phase 2] Running GMRES (Galerkin) with MG Preconditioner..." << std::endl;
 
-    for (int i = 0; i < refinements; ++i)
-        mg.addRefinedLevel();
-
-    std::cout << "NDof = " << mg.NumRows() << std::endl;
-
-    mg.setCycleType(StokesNitsche::MGCycleType::VCycle);
-    mg.setSmoothIterations(1, 1);
+    // Switch MG to Galerkin mode for preconditioning
     mg.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
 
-    auto fine_mesh_ptr = std::make_shared<mfem::Mesh>(
-        mg.getFinestOperator().getMesh());
-
-    StokesNitsche::StokesNitscheOperator op_galerkin(
-        fine_mesh_ptr, theta, penalty, factor);
+    // Create a specific Galerkin operator for the GMRES test (A matrix)
+    auto fine_mesh_ptr = std::make_shared<mfem::Mesh>(fine_op.getMesh());
+    StokesNitsche::StokesNitscheOperator op_galerkin(fine_mesh_ptr, theta, penalty, factor);
     op_galerkin.setGalerkinMode();
+
+    // Reset vectors for GMRES
+    op_galerkin.Mult(x_exact, b);
+    x_sol = 0.0;
 
     mfem::GMRESSolver gmres;
     gmres.SetOperator(op_galerkin);
     gmres.SetPreconditioner(mg);
     gmres.SetAbsTol(1e-12);
     gmres.SetRelTol(tol);
-    gmres.SetMaxIter(100);
+    gmres.SetMaxIter(128);
     gmres.SetPrintLevel(1);
-    gmres.SetKDim(20);
+    gmres.SetKDim(100);
 
-    const int num_rows = op_galerkin.NumRows();
-    mfem::Vector x_exact(num_rows), b(num_rows), x_sol(num_rows);
-
-    x_exact.Randomize(1);
-    op_galerkin.Mult(x_exact, b);
-    x_sol = 0.0;
-
-    std::cout << "Running GMRES (Galerkin) with MG (Galerkin) Precond...\n";
     gmres.Mult(b, x_sol);
 
-    ASSERT_TRUE(gmres.GetConverged()) << "GMRES failed to converge.";
+    ASSERT_TRUE(gmres.GetConverged())
+        << "Phase 2 Failed: GMRES failed to converge.";
 
-    const double rel_res = gmres.GetFinalRelNorm();
-    std::cout << "Final Relative Residual (according to mfem): "
-              << rel_res << std::endl;
+    const double gmres_final_rel = gmres.GetFinalRelNorm();
+    std::cout << "Final GMRES Relative Residual: " << gmres_final_rel << std::endl;
 
-    EXPECT_LT(rel_res, tol);
+    EXPECT_LT(gmres_final_rel, tol);
+
+    std::cout << "Phase 2 Passed." << std::endl;
 }
 
-// Tests V-Cycle convergence on a Hexahedral mesh.
-// Initializes a 1x1x1 Hex mesh and delegates validation to the RunVCycleTest helper.
-TEST(StokesMGTest, VCycleConvergenceHex)
+// --------------------------------------------------------
+// Test Cases
+// --------------------------------------------------------
+
+TEST(StokesMGTest, ConvergenceHex)
 {
     const unsigned int n = 1;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
         mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::HEXAHEDRON)
     );
-    RunVCycleTest(mesh_ptr);
+    RunStokesMGTest(mesh_ptr);
 }
 
-// Tests GMRES convergence with MG preconditioning on a Hexahedral mesh.
-// Initializes a 1x1x1 Hex mesh and delegates validation to the RunGMRESTest helper.
-TEST(StokesMGTest, GMRESGalerkinPreconditionerHex)
-{
-    const unsigned int n = 1;
-    auto mesh_ptr = std::make_shared<mfem::Mesh>(
-        mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::HEXAHEDRON)
-    );
-    RunGMRESTest(mesh_ptr);
-}
-
-// Tests V-Cycle convergence on a Tetrahedral mesh.
-// Initializes a 1x1x1 Tet mesh and delegates validation to the RunVCycleTest helper.
-TEST(StokesMGTest, VCycleConvergenceTetra)
+TEST(StokesMGTest, ConvergenceTetra)
 {
     const unsigned int n = 1;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
         mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
     );
-    RunVCycleTest(mesh_ptr);
+    RunStokesMGTest(mesh_ptr);
 }
 
-// Tests GMRES convergence with MG preconditioning on a Tetrahedral mesh.
-// Initializes a 1x1x1 Tet mesh and delegates validation to the RunGMRESTest helper.
-TEST(StokesMGTest, GMRESGalerkinPreconditionerTetra)
+TEST(StokesMGTest, ConvergenceRefTetra)
 {
-    const unsigned int n = 1;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-        mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
+        "../extern/mfem/data/ref-tetrahedron.mesh", 1, 1
     );
-    RunGMRESTest(mesh_ptr);
+    RunStokesMGTest(mesh_ptr);
+}
+
+TEST(StokesMGTest, ConvergenceBall)
+{
+    auto mesh_ptr = std::make_shared<mfem::Mesh>(
+        "../tests/meshes/ball.msh", 1, 1
+    );
+    RunStokesMGTest(mesh_ptr, 3);
+}
+
+TEST(StokesMGTest, ConvergenceBallCavity)
+{
+    auto mesh_ptr = std::make_shared<mfem::Mesh>(
+        "../tests/meshes/ball_hole.msh", 1, 1
+    );
+    RunStokesMGTest(mesh_ptr, 3);
+}
+
+TEST(StokesMGTest, ConvergenceCorner)
+{
+    auto mesh_ptr = std::make_shared<mfem::Mesh>(
+        "../tests/meshes/corner.msh", 1, 1
+    );
+    RunStokesMGTest(mesh_ptr, 3);
+}
+
+TEST(StokesMGTest, ConvergenceCornerStructured)
+{
+    auto mesh_ptr = std::make_shared<mfem::Mesh>(
+        "../tests/meshes/corner_structured.msh", 1, 1
+    );
+    RunStokesMGTest(mesh_ptr, 3);
+}
+
+TEST(StokesMGTest, ConvergenceCylinder)
+{
+    auto mesh_ptr = std::make_shared<mfem::Mesh>(
+        "../tests/meshes/cylinder.msh", 1, 1
+    );
+    RunStokesMGTest(mesh_ptr, 3);
 }
