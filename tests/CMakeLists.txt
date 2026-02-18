@@ -30,6 +30,9 @@ add_executable(stokesmg_tests
 add_executable(mgconvergence
     MGConvergence.cpp
 )
+add_executable(femconvergence
+    FEMConvergence.cpp
+)
 
 
 target_link_libraries(incidence_tests
@@ -128,7 +131,6 @@ target_link_libraries(stokesmg_tests
         pthread
 )
 
-
 target_link_libraries(mgconvergence
     PRIVATE
         stokesoperator
@@ -138,6 +140,15 @@ target_link_libraries(mgconvergence
         mfem
         Boost::program_options
         spectra_mfem
+)
+
+target_link_libraries(femconvergence
+    PRIVATE
+        stokesoperator
+        stokesdgs
+        stokesmg
+        mfem
+        Boost::program_options
 )
 
 

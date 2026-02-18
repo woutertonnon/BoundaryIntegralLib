@@ -107,7 +107,7 @@ void StokesNitscheDGS::computeCorrection(const SmootherType st) const
             Lp_s.Mult(r_p, corr_p);
             break;
         }
-        case SmootherType::Jacobi:
+        case SmootherType::Jacobi: // NOTE: BAD
             Lu_->DiagScale(r_u, corr_u);
             grad_adj_->AddMult(corr_u, r_p, -1.0);
             Lp_->DiagScale(r_p, corr_p);

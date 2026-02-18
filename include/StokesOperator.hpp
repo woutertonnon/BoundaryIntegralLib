@@ -39,6 +39,10 @@ public:
     const mfem::FiniteElementSpace& getHCurlSpace()    const { return *hcurl_space_; }
     const mfem::FiniteElementSpace& getHDivOrL2Space() const { return *hdiv_or_l2_space_; }
 
+    mfem::FiniteElementSpace& getH1Space()       { return *h1_space_; }
+    mfem::FiniteElementSpace& getHCurlSpace()    { return *hcurl_space_; }
+    mfem::FiniteElementSpace& getHDivOrL2Space() { return *hdiv_or_l2_space_; }
+
     const mfem::BilinearForm& getMassH1()       const { return *mass_h1_; }
     const mfem::BilinearForm& getMassHCurl()    const { return *mass_hcurl_; }
     const mfem::BilinearForm& getMassHDivOrL2() const { return *mass_hdiv_or_l2_; }
