@@ -22,14 +22,14 @@ namespace po = boost::program_options;
 int runGMRES(const mfem::Operator& A,
              mfem::Solver& P,
              const double tol,
-             const int max_iter = 1000,
-             const int restart = 100)
+             const int restart = 100,
+             const int max_iter = 1000)
 {
     mfem::GMRESSolver gmres;
     gmres.SetOperator(A);
     gmres.SetPreconditioner(P);
     gmres.SetAbsTol(1e-12);
-    gmres.SetRelTol(1e-6);
+    gmres.SetRelTol(tol);
     gmres.SetMaxIter(max_iter);
     gmres.SetPrintLevel(0);
     gmres.SetKDim(restart);
@@ -56,12 +56,13 @@ int runGMRES(const mfem::Operator& A,
 int main(int argc, char* argv[])
 {
 #ifdef NDEBUG
-    mfem::Device("omp");
+    mfem::Device device("omp");
+    // device.Print(std::cout);
 #endif
 
     std::string mesh_file, output_file, cycle_str;
     int max_refinements, nev, n_gmres;
-    double tol;
+    double gmres_tol, eval_tol;
     bool verbose;
 
     // Parse command line options
@@ -74,7 +75,8 @@ int main(int argc, char* argv[])
         ("nev,n", po::value<int>(&nev)->default_value(1), "number of eigenvalues (0 to skip)")
         ("gmres,g", po::value<int>(&n_gmres)->default_value(1), "number of GMRES runs")
         ("verbose,v", po::bool_switch(&verbose)->default_value(false), "enable verbose output")
-        ("tol,t", po::value<double>(&tol)->default_value(1e-4), "tolerance")
+        ("gmres_tol", po::value<double>(&gmres_tol)->default_value(1e-6), "GMRES tolerance")
+        ("eval_tol", po::value<double>(&eval_tol)->default_value(1e-4), "Eigenvalue solver tolerance")
         ("cycle,c", po::value<std::string>(&cycle_str)->default_value("V"), "cycle type (V or W)");
 
     po::variables_map vm;
@@ -98,7 +100,11 @@ int main(int argc, char* argv[])
                  penalty = 10.0,
                  factor = 1.0;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(mesh_file.c_str(), 1, 1);
-    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor);
+    StokesNitsche::StokesMG mg(
+      mesh_ptr, theta, penalty, factor,
+      StokesNitsche::MassLumping::Diagonal,
+      StokesNitsche::SmootherType::GaussSeidelForw
+    );
 
     if (cycle_str == "W" || cycle_str == "w")
         mg.setCycleType(StokesNitsche::MGCycleType::WCycle);
@@ -148,7 +154,7 @@ int main(int argc, char* argv[])
 
         Eigen::VectorXcd evals;
         if (nev > 0)
-            evals = computeErrorOperatorEigenvalues(finest_op, mg, nev, tol, verbose);
+            evals = computeErrorOperatorEigenvalues(finest_op, mg, nev, eval_tol, verbose);
 
         // 2. Run GMRES (Galerkin Mode)
         finest_op.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
@@ -160,7 +166,7 @@ int main(int argc, char* argv[])
         {
             long total = 0;
             for (int i = 0; i < n_gmres; ++i)
-                total += runGMRES(finest_op, mg, tol);
+                total += runGMRES(finest_op, mg, gmres_tol);
             avg_gmres = static_cast<double>(total) / n_gmres;
         }
 

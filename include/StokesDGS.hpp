@@ -7,14 +7,14 @@
 namespace StokesNitsche
 {
 
-enum SmootherType { GAUSS_SEIDEL_FORW, GAUSS_SEIDEL_BACK };
+enum class SmootherType { GaussSeidelForw, GaussSeidelSym, Jacobi };
 
 class StokesNitscheDGS : public mfem::Solver
 {
 public:
     /** @brief Distributed Gauss-Seidel Smoother for Stokes-Nitsche systems. */
     StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
-                     const SmootherType type = GAUSS_SEIDEL_FORW);
+                     const SmootherType type = SmootherType::GaussSeidelForw);
 
     ~StokesNitscheDGS() override = default;
 

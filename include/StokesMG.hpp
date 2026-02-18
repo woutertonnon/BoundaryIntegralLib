@@ -29,7 +29,7 @@ public:
              const double penalty,
              const double factor,
              const MassLumping ml = MassLumping::Diagonal,
-             const SmootherType st = GAUSS_SEIDEL_FORW);
+             const SmootherType st = SmootherType::GaussSeidelForw);
 
     ~StokesMG() override = default;
 
