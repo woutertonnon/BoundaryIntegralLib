@@ -29,7 +29,7 @@ int runGMRES(const mfem::Operator& A,
     gmres.SetOperator(A);
     gmres.SetPreconditioner(P);
     gmres.SetAbsTol(1e-12);
-    gmres.SetRelTol(tol);
+    gmres.SetRelTol(1e-6);
     gmres.SetMaxIter(max_iter);
     gmres.SetPrintLevel(0);
     gmres.SetKDim(restart);
