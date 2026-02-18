@@ -12,6 +12,9 @@ add_executable(incidence_tests
 add_executable(bd_separator_tests
     BoundarySeparatorTest.cpp
 )
+add_executable(spectraop_tests
+    SpectraOpTest.cpp
+)
 add_executable(boundaryoperators_tests
     BoundaryOperatorsTests.cpp
 )
@@ -43,6 +46,20 @@ target_link_libraries(bd_separator_tests
     PRIVATE
         bd_separator
         mfem
+        # Prefer imported targets when available (CMake >= 3.5)
+        $<$<TARGET_EXISTS:GTest::gtest>:GTest::gtest>
+        $<$<TARGET_EXISTS:GTest::gtest_main>:GTest::gtest_main>
+        # Fallback for older FindGTest modules
+        ${GTEST_LIBRARIES}
+        ${GTEST_MAIN_LIBRARIES}
+        pthread
+)
+
+target_link_libraries(spectraop_tests
+    PRIVATE
+        spectra_mfem
+        mfem
+        Eigen3::Eigen
         # Prefer imported targets when available (CMake >= 3.5)
         $<$<TARGET_EXISTS:GTest::gtest>:GTest::gtest>
         $<$<TARGET_EXISTS:GTest::gtest_main>:GTest::gtest_main>
@@ -110,6 +127,7 @@ target_link_libraries(stokesmg_tests
 
 add_test(NAME incidence_tests COMMAND incidence_tests)
 add_test(NAME boundaryoperators_tests COMMAND boundaryoperators_tests)
+add_test(NAME spectraop_tests COMMAND spectraop_tests)
 add_test(NAME stokesoperator_tests COMMAND stokesoperator_tests)
 add_test(NAME stokesdgs_tests COMMAND stokesdgs_tests)
 add_test(NAME stokesmg_tests COMMAND stokesmg_tests)
