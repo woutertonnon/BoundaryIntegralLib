@@ -54,10 +54,14 @@ void StokesNitscheOperator::initMass()
     mfem::ConstantCoefficient four(4.0);
 
     mass_h1_->AddDomainIntegrator(new mfem::MassIntegrator(one));
-    mass_hcurl_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(one));
+    mass_hcurl_->AddDomainIntegrator(
+        new mfem::VectorFEMassIntegrator(one)
+    );
 
     if (mesh_->Dimension() == 2)
-        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::MassIntegrator(four));
+        mass_hdiv_or_l2_->AddDomainIntegrator(
+            new mfem::MassIntegrator(four)
+        );
     else
         mass_hdiv_or_l2_->AddDomainIntegrator(
             new mfem::VectorFEMassIntegrator(four)
@@ -148,7 +152,9 @@ StokesNitscheOperator::getFullGalerkinSystem() const
         auto G = std::make_unique<mfem::MixedBilinearForm>(
             h1_space_.get(), hcurl_space_.get()
         );
-        G->AddDomainIntegrator(new mfem::MixedVectorGradientIntegrator(one));
+        G->AddDomainIntegrator(
+            new mfem::MixedVectorGradientIntegrator(one)
+        );
         G->Assemble();
         G->Finalize();
         grad = std::unique_ptr<mfem::SparseMatrix>(G->LoseMat());
@@ -283,9 +289,8 @@ void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
 
     if (opmode_ == OperatorMode::Galerkin)
     {
-        double denom = mass_h1_->InnerProduct(ones, ones);
-        if (denom != 0.0)
-            proj = mass_h1_->InnerProduct(ones, x_p) / denom;
+        const double denom = mass_h1_->InnerProduct(ones, ones);
+        proj = mass_h1_->InnerProduct(ones, x_p) / denom;
     }
     else // DEC
     {
@@ -295,9 +300,8 @@ void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
         mfem::Vector tmp(x_p);
         tmp *= mass_h1_lumped_;
 
-        double denom = mass_h1_lumped_ * ones;
-        if (denom != 0.0)
-            proj = (tmp * ones) / denom;
+        const double denom = mass_h1_lumped_ * ones;
+        proj = (tmp * ones) / denom;
     }
 
     ones *= proj;

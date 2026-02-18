@@ -263,7 +263,9 @@ TEST(IncidenceTest, CurlCurl3D)
     auto mass_ = std::make_unique<mfem::BilinearForm>(
         hdiv.get()
     );
-    mass_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(four));
+    mass_->AddDomainIntegrator(
+        new mfem::VectorFEMassIntegrator(four)
+    );
     mass_->Assemble(); mass_->Finalize();
     const mfem::SparseMatrix& mass = mass_->SpMat();
 

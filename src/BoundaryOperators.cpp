@@ -126,10 +126,10 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
       el.CalcPhysCurlShape(*tr1, curl_shape);
 
       mfem::Vector temp_out(3);
-      Tr.Transform(ip_face,temp_out);
+      Tr.Transform(ip_face, temp_out);
 
       mfem::Vector u(3);
-      Q.Eval(u,Tr,ip_face);
+      Q.Eval(u, Tr, ip_face);
 
       for (int k = 0; k < el.GetDof(); k++)
       {
@@ -151,6 +151,4 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
 
       }
    }
-
-
 }

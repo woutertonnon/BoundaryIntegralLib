@@ -5,14 +5,8 @@
 #include <cmath>
 #include <memory>
 #include <vector>
+#include <string>
 
-// ============================================================================
-// 1. Exact Solutions (Analytic Test Case)
-// ============================================================================
-
-// Exact Velocity: u = ( y^2, z^2, x^2 )
-// Div(u) = 0
-// Delta u = (2, 2, 2)
 void u_exact_func(const mfem::Vector& x, mfem::Vector& u)
 {
     u(0) = x(1) * x(1);
@@ -20,16 +14,11 @@ void u_exact_func(const mfem::Vector& x, mfem::Vector& u)
     u(2) = x(0) * x(0);
 }
 
-// Exact Pressure: p = x + y + z - 3/2
-// Mean of x on [0, 1] is 0.5, so mean(p) = 0
-// Grad(p) = (1, 1, 1)
 double p_exact_func(const mfem::Vector& x)
 {
     return x(0) + x(1) + x(2) - 1.5;
 }
 
-// Source Term: f = -Delta u + grad p
-// f = -(2, 2, 2) + (1, 1, 1) = (-1, -1, -1)
 void f_rhs_func(const mfem::Vector& x, mfem::Vector& f)
 {
     f(0) = -1.0;
@@ -37,12 +26,7 @@ void f_rhs_func(const mfem::Vector& x, mfem::Vector& f)
     f(2) = -1.0;
 }
 
-// ============================================================================
-// 2. Convergence Study Function
-// ============================================================================
-
-void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
-                      const int max_refs)
+void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs)
 {
     const double theta   = 1.0,
                  penalty = 10.0,
@@ -51,7 +35,6 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
     StokesNitsche::StokesMG mg_solver(mesh_ptr, theta, penalty, factor);
     mg_solver.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
     mg_solver.setIterativeMode(false);
-
     mg_solver.setCycleType(StokesNitsche::MGCycleType::VCycle);
     mg_solver.setSmoothIterations(1, 1);
 
@@ -60,8 +43,7 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
     mfem::VectorFunctionCoefficient f_coeff(3, f_rhs_func);
 
     std::cout << "\n======================================================================\n";
-    std::cout << " Stokes-Nitsche Geometric Multigrid Convergence Study\n";
-    std::cout << " Cycle: V-Cycle " << "\n";
+    std::cout << " Stokes-Nitsche Geometric Multigrid Convergence Study ";
     std::cout << "======================================================================\n";
     std::cout << std::setw(10) << "Level"
               << std::setw(15) << "DOFs"
@@ -75,17 +57,19 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
     // 3. Refinement Loop
     for (int l = 0; l <= max_refs; ++l)
     {
-        // Add level (skip on first iteration as constructor created level 0)
         if (l > 0)
             mg_solver.addRefinedLevel();
 
-        // Get the System Operator for the finest level
+        // for whathever reason, mfem wants non const pointers to the fe spaces
+        // TODO: Fix
         StokesNitsche::StokesNitscheOperator& op =
           *const_cast<StokesNitsche::StokesNitscheOperator*>(
             &mg_solver.getFinestOperator()
           );
 
-        const mfem::Mesh& current_mesh = op.getMesh();
+        // Access the current mesh (const is fine for saving)
+        // We cast away const here just to satisfy ParaViewDataCollection constructor
+        mfem::Mesh& current_mesh = const_cast<mfem::Mesh&>(op.getMesh());
 
         op.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
 
@@ -97,7 +81,7 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
         mfem::FiniteElementSpace& hcurl = op.getHCurlSpace();
         mfem::FiniteElementSpace& h1 = op.getH1Space();
-        // Assemble right into rhs
+
         mfem::LinearForm fu(&hcurl, rhs.GetData());
         fu.AddBdrFaceIntegrator(
           new ND_NitscheLFIntegrator(theta, penalty, u_coeff, factor)
@@ -118,19 +102,27 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
         gmres.SetPrintLevel(0);
         gmres.SetOperator(op);
         gmres.SetPreconditioner(mg_solver);
-        gmres.SetKDim(64);
-        // gmres.SetPrintLevel(1);
+        gmres.SetKDim(128);
 
-        // Solve
         gmres.Mult(rhs, x);
         op.eliminateConstants(x);
 
-        // D. Compute Errors
-        mfem::GridFunction u_h(&hcurl, x.GetData());
-        const double err_u = u_h.ComputeL2Error(u_coeff);
+        // mfem::Vector x_u(x.GetData(), nu);
+        // mfem::Vector x_p(x.GetData() + nu, np);
+        //
+        // mfem::Vector ones(np);
+        // ones = 1.0;
+        // // Should be 0
+        // std::cout << op.getMassH1().InnerProduct(ones, x_p) << std::endl;
 
+        // --- Post-Processing & Error ---
+
+        // 1. Recover Solution GridFunctions
+        mfem::GridFunction u_h(&hcurl, x.GetData());
         mfem::GridFunction p_h(&h1, x.GetData() + nu);
-        const double err_p = p_h.ComputeL2Error(p_coeff);
+
+        const double err_u = u_h.ComputeL2Error(u_coeff);
+        // const double err_p = p_h.ComputeL2Error(p_coeff);
 
         double rate = 0.0;
         if (l > 0)
@@ -143,13 +135,42 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
                   << std::setw(15) << std::fixed << std::setprecision(2) << rate << std::endl;
 
         err_u_prev = err_u;
+
+        // ============================================================
+        //  VTK OUTPUT SECTION
+        // ============================================================
+
+        // 2. Prepare Exact Solutions as GridFunctions for comparison
+        mfem::GridFunction u_exact_gf(&hcurl);
+        u_exact_gf.ProjectCoefficient(u_coeff);
+
+        mfem::GridFunction p_exact_gf(&h1);
+        p_exact_gf.ProjectCoefficient(p_coeff);
+
+        // 3. Setup ParaView Collection
+        // Naming convention: Stokes_Refinement_L0, Stokes_Refinement_L1, etc.
+        std::string name = "Stokes_Refinement_L" + std::to_string(l);
+
+        mfem::ParaViewDataCollection pd(name, &current_mesh);
+        pd.SetLevelsOfDetail(1); // Standard resolution
+        pd.SetDataFormat(mfem::VTKFormat::BINARY); // Binary is smaller/faster than ASCII
+        pd.SetHighOrderOutput(true); // Preserve high-order info if needed
+
+        // 4. Register Fields
+        pd.RegisterField("velocity", &u_h);
+        pd.RegisterField("pressure", &p_h);
+        pd.RegisterField("velocity_exact", &u_exact_gf);
+        pd.RegisterField("pressure_exact", &p_exact_gf);
+
+        // 5. Save to disk
+        pd.Save();
     }
     std::cout << std::string(70, '-') << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
-    const unsigned int n = 2;
+    const unsigned int n = 1;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
       mfem::Mesh::MakeCartesian3D(
         n, n, n, mfem::Element::HEXAHEDRON
