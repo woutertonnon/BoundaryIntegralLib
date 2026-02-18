@@ -72,8 +72,8 @@ void StokesNitscheDGS::initTransformedSystem()
 void StokesNitscheDGS::computeResidual(const mfem::Vector& x,
                                        const mfem::Vector& y) const
 {
-    residual_ = x;
-    op_->AddMult(y, residual_, -1.0);
+    op_->MultDEC(y, residual_);
+    residual_ -= x;
 }
 
 void StokesNitscheDGS::computeCorrection(const SmootherType st) const
@@ -110,7 +110,7 @@ void StokesNitscheDGS::computeCorrection(const SmootherType st) const
 
 void StokesNitscheDGS::distributeCorrection(mfem::Vector& y) const
 {
-    T_->AddMult(corr_, y);
+    T_->AddMult(corr_, y, -1.0);
 }
 
 StokesNitscheDGS::StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
@@ -122,8 +122,6 @@ StokesNitscheDGS::StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
       residual_(op->NumRows()),
       corr_(op->NumRows())
 {
-    if (op->getOperatorMode() != OperatorMode::DEC)
-        MFEM_ABORT("StokesNitscheDGS: OperatorMode != DEC");
     if (op->getMassLumping() == MassLumping::None)
         MFEM_ABORT("StokesNitscheDGS: MassLumping is None");
 
@@ -138,7 +136,8 @@ double StokesNitscheDGS::computeResidualNorm(const mfem::Vector& x,
     return residual_.Norml2();
 }
 
-void StokesNitscheDGS::Mult(const mfem::Vector& x, mfem::Vector& y) const
+void StokesNitscheDGS::Mult(const mfem::Vector& x,
+                                  mfem::Vector& y) const
 {
     computeResidual(x, y);
     computeCorrection(st_);

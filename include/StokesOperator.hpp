@@ -28,8 +28,7 @@ public:
     MassLumping getMassLumping() const { return ml_; }
     OperatorMode getOperatorMode() const { return opmode_; }
 
-    void setGalerkinMode() { opmode_ = OperatorMode::Galerkin; }
-    void setDECMode()      { opmode_ = OperatorMode::DEC; }
+    void setOperatorMode(const OperatorMode mode) const { opmode_ = mode; }
 
     const mfem::SparseMatrix& getD0() const { return d0_; }
     const mfem::SparseMatrix& getD1() const { return d1_; }
@@ -75,7 +74,7 @@ private:
     std::shared_ptr<mfem::Mesh> mesh_;
     const MassLumping ml_;
     const mfem::Array<int> offsets_;
-    OperatorMode opmode_ = OperatorMode::Galerkin;
+    mutable OperatorMode opmode_ = OperatorMode::Galerkin;
 
     std::unique_ptr<mfem::FiniteElementCollection> h1_fec_;
     std::unique_ptr<mfem::FiniteElementCollection> hcurl_fec_;

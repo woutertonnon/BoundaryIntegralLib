@@ -122,7 +122,7 @@ TEST(StokesOperatorTest, MatrixRegularityDEC)
     StokesNitscheOperator op(mesh_ptr, theta, penalty, factor,
                              MassLumping::Diagonal);
 
-    op.setDECMode();
+    op.setOperatorMode(StokesNitsche::OperatorMode::DEC);
 
     ASSERT_EQ(op.getOperatorMode(), OperatorMode::DEC);
     std::unique_ptr<mfem::SparseMatrix> A = op.getFullDECSystem();
@@ -209,7 +209,7 @@ TEST(StokesOperatorTest, OperatorDEC)
     StokesNitscheOperator op(mesh_ptr,
                              theta, penalty, factor,
                              MassLumping::Diagonal);
-    op.setDECMode();
+    op.setOperatorMode(StokesNitsche::OperatorMode::DEC);
 
     ASSERT_EQ(op.getOperatorMode(), OperatorMode::DEC);
 

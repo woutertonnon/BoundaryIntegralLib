@@ -22,7 +22,7 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
     auto op = std::make_shared<StokesNitscheOperator>(
         coarse_mesh, theta_, penalty_, factor_, ml_
     );
-    op->setDECMode();
+    // op->setDECMode();
     auto smoother = std::make_shared<StokesNitscheDGS>(op, st_);
 
     height = op->NumRows();
@@ -35,7 +35,7 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
     );
 
 #ifdef MFEM_USE_SUITESPARSE
-    coarse_mat_ = levels_[0]->op->getFullSystem();
+    coarse_mat_ = levels_[0]->op->getFullDECSystem();
 
     if (coarse_mat_->NumRows() > height)
     {
@@ -65,7 +65,7 @@ void StokesMG::addRefinedLevel()
     auto fine_op = std::make_shared<StokesNitscheOperator>(
         fine_mesh, theta_, penalty_, factor_, ml_
     );
-    fine_op->setDECMode();
+    // fine_op->setDECMode();
     auto fine_smoother = std::make_shared<StokesNitscheDGS>(fine_op, st_);
 
     std::unique_ptr<const mfem::Operator> P;
@@ -179,8 +179,9 @@ void StokesMG::cycle(const int level_idx,
     for (int i = 0; i < pre_smooth_; ++i)
         lvl.smoother->Mult(b, x);
 
-    lvl.res = b;
-    lvl.op->AddMult(x, lvl.res, -1.0);
+    lvl.op->MultDEC(x, lvl.res);
+    lvl.res -= b;
+    // lvl.res.Neg();
 
     Level& coarse_lvl = *levels_[level_idx - 1];
     lvl.R->Mult(lvl.res, coarse_lvl.b);
@@ -192,7 +193,8 @@ void StokesMG::cycle(const int level_idx,
         cycle(level_idx - 1, coarse_lvl.b, coarse_lvl.x);
 
     lvl.P->Mult(coarse_lvl.x, lvl.res);
-    x += lvl.res;
+    // x += lvl.res;
+    x -= lvl.res;
 
     for (int i = 0; i < post_smooth_; ++i)
         lvl.smoother->Mult(b, x);
@@ -203,7 +205,7 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
     if (levels_.empty())
         MFEM_ABORT("StokesMG::Mult: No levels defined.");
 
-    if (!iterative_mode)
+    if(!iterative_mode)
         x = 0.0;
 
     if (mode_ == OperatorMode::Galerkin)
@@ -240,55 +242,6 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
 void StokesMG::SetOperator(const mfem::Operator&)
 {
     MFEM_ABORT("StokesMG::SetOperator: Use addRefinedLevel to manage the hierarchy.");
-}
-
-void StokesMG::setCoarseSolver(std::shared_ptr<const mfem::Solver> solver)
-{
-    coarse_solver_ = std::move(solver);
-}
-
-void StokesMG::setSmoothIterations(const int pre, const int post)
-{
-    pre_smooth_ = pre;
-    post_smooth_ = post;
-}
-
-void StokesMG::setCycleType(const MGCycleType type)
-{
-    cycle_type_ = type;
-}
-
-void StokesMG::setOperatorMode(const OperatorMode mode)
-{
-    mode_ = mode;
-}
-
-const StokesNitscheOperator& StokesMG::getOperator(const int level) const
-{
-    MFEM_VERIFY(level >= 0 && level < levels_.size(),
-                "StokesMG::getOperator: Level index out of bounds.");
-    return *levels_[level]->op;
-}
-
-const StokesNitscheDGS& StokesMG::getSmoother(const int level) const
-{
-    MFEM_VERIFY(level >= 0 && level < levels_.size(),
-                "StokesMG::getSmoother: Level index out of bounds.");
-    return *levels_[level]->smoother;
-}
-
-const StokesNitscheOperator& StokesMG::getFinestOperator() const
-{
-    MFEM_VERIFY(!levels_.empty(),
-                "StokesMG::getFinestOperator: No levels exist.");
-    return *levels_.back()->op;
-}
-
-const StokesNitscheDGS& StokesMG::getFinestSmoother() const
-{
-    MFEM_VERIFY(!levels_.empty(),
-                "StokesMG::getFinestSmoother: No levels exist.");
-    return *levels_.back()->smoother;
 }
 
 } // namespace StokesNitsche

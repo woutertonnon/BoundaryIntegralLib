@@ -38,6 +38,8 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     // =======================================================
     // PHASE 1: Standalone V-Cycle Convergence
     // =======================================================
+    fine_op.setOperatorMode(StokesNitsche::OperatorMode::DEC);
+    mg.setOperatorMode(StokesNitsche::OperatorMode::DEC);
     std::cout << "\n[Phase 1] Running Standalone V-Cycle Test..." << std::endl;
 
     // Setup System for V-Cycle
@@ -45,6 +47,7 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     x_sol = 0.0;
 
     mg.setCycleType(StokesNitsche::MGCycleType::VCycle);
+    mg.setIterativeMode(true);
     mg.setSmoothIterations(1, 1);
 
     double initial_norm = 0.0;
@@ -56,7 +59,7 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     {
         residual = b;
         fine_op.AddMult(x_sol, residual, -1.0);
-        double current_norm = residual.Norml2();
+        const double current_norm = residual.Norml2();
 
         if (iter == 0) initial_norm = current_norm;
         double rel_norm = current_norm / initial_norm;
@@ -83,22 +86,18 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     // =======================================================
     // PHASE 2: GMRES with Galerkin MG Preconditioner
     // =======================================================
-    std::cout << "\n[Phase 2] Running GMRES (Galerkin) with MG Preconditioner..." << std::endl;
-
-    // Switch MG to Galerkin mode for preconditioning
+    fine_op.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
     mg.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
-
-    // Create a specific Galerkin operator for the GMRES test (A matrix)
-    auto fine_mesh_ptr = std::make_shared<mfem::Mesh>(fine_op.getMesh());
-    StokesNitsche::StokesNitscheOperator op_galerkin(fine_mesh_ptr, theta, penalty, factor);
-    op_galerkin.setGalerkinMode();
+    mg.setIterativeMode(false);
+    std::cout << "\n[Phase 2] Running GMRES (Galerkin) with MG Preconditioner..."
+              << std::endl;
 
     // Reset vectors for GMRES
-    op_galerkin.Mult(x_exact, b);
+    fine_op.Mult(x_exact, b);
     x_sol = 0.0;
 
     mfem::GMRESSolver gmres;
-    gmres.SetOperator(op_galerkin);
+    gmres.SetOperator(fine_op);
     gmres.SetPreconditioner(mg);
     gmres.SetAbsTol(1e-12);
     gmres.SetRelTol(tol);

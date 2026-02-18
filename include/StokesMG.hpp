@@ -39,23 +39,55 @@ public:
     /** @brief Refines the finest mesh and adds a new MG level. */
     void addRefinedLevel();
 
-    void setCoarseSolver(std::shared_ptr<const mfem::Solver> solver);
+    void setCoarseSolver(std::shared_ptr<const mfem::Solver> solver)
+    {
+        coarse_solver_ = std::move(solver);
+    }
 
-    void setSmoothIterations(const int pre, const int post);
-    void setCycleType(const MGCycleType type);
+    void setSmoothIterations(const int pre, const int post)
+    {
+        pre_smooth_ = pre;
+        post_smooth_ = post;
+    }
+
+    void setCycleType(const MGCycleType type) { cycle_type_ = type; }
+    void setIterativeMode(const bool mode) { iterative_mode = mode; }
 
     /** @brief Set the mode of the input system.
      * If Galerkin: Input 'b' is scaled by M_lumped^{-1} before the MG cycle.
      * If DEC: Input 'b' is used as-is. */
-    void setOperatorMode(const OperatorMode mode);
+    void setOperatorMode(const OperatorMode mode) const { mode_ = mode; }
 
     void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
     void SetOperator(const mfem::Operator& op) override;
 
-    const StokesNitscheOperator& getOperator(const int level) const;
-    const StokesNitscheDGS& getSmoother(const int level) const;
-    const StokesNitscheOperator& getFinestOperator() const;
-    const StokesNitscheDGS& getFinestSmoother() const;
+    const StokesNitscheOperator& getOperator(const int level) const
+    {
+        MFEM_VERIFY(level >= 0 && level < levels_.size(),
+                    "StokesMG::getOperator: Level index out of bounds.");
+        return *levels_[level]->op;
+    }
+
+    const StokesNitscheDGS& getSmoother(const int level) const
+    {
+        MFEM_VERIFY(level >= 0 && level < levels_.size(),
+                    "StokesMG::getSmoother: Level index out of bounds.");
+        return *levels_[level]->smoother;
+    }
+
+    const StokesNitscheOperator& getFinestOperator() const
+    {
+        MFEM_VERIFY(!levels_.empty(),
+                    "StokesMG::getFinestOperator: No levels exist.");
+        return *levels_.back()->op;
+    }
+
+    const StokesNitscheDGS& getFinestSmoother() const
+    {
+        MFEM_VERIFY(!levels_.empty(),
+                    "StokesMG::getFinestSmoother: No levels exist.");
+        return *levels_.back()->smoother;
+    }
 
     MGCycleType getCycleType() const { return cycle_type_; }
     MassLumping getMassLumping() const { return ml_; }
@@ -104,7 +136,7 @@ private:
     int pre_smooth_ = 1;
     int post_smooth_ = 1;
     MGCycleType cycle_type_ = MGCycleType::VCycle;
-    OperatorMode mode_ = OperatorMode::DEC;
+    mutable OperatorMode mode_ = OperatorMode::Galerkin;
 
     mutable mfem::Vector b_scaled_;
 

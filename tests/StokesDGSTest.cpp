@@ -22,7 +22,7 @@ TEST(StokesDGSTest, ResidualComputationHex)
         mesh_ptr, theta, penalty, factor
     );
 
-    op_ptr->setDECMode();
+    op_ptr->setOperatorMode(StokesNitsche::OperatorMode::DEC);
     ASSERT_EQ(op_ptr->getOperatorMode(), StokesNitsche::OperatorMode::DEC);
 
     StokesNitsche::StokesNitscheDGS dgs(op_ptr);
@@ -83,7 +83,7 @@ TEST(StokesDGSTest, ConvergenceHex)
         mesh_ptr, theta, penalty, factor
     );
 
-    op_ptr->setDECMode();
+    op_ptr->setOperatorMode(StokesNitsche::OperatorMode::DEC);
     ASSERT_EQ(op_ptr->getOperatorMode(), StokesNitsche::OperatorMode::DEC);
 
     std::unique_ptr<mfem::SparseMatrix> A = op_ptr->getFullDECSystem();
@@ -167,7 +167,7 @@ TEST(StokesDGSTest, ResidualComputationTetra)
         mesh_ptr, theta, penalty, factor
     );
 
-    op_ptr->setDECMode();
+    op_ptr->setOperatorMode(StokesNitsche::OperatorMode::DEC);
     ASSERT_EQ(op_ptr->getOperatorMode(), StokesNitsche::OperatorMode::DEC);
 
     StokesNitsche::StokesNitscheDGS dgs(op_ptr);
@@ -228,7 +228,7 @@ TEST(StokesDGSTest, ConvergenceTetra)
         mesh_ptr, theta, penalty, factor
     );
 
-    op_ptr->setDECMode();
+    op_ptr->setOperatorMode(StokesNitsche::OperatorMode::DEC);
     ASSERT_EQ(op_ptr->getOperatorMode(), StokesNitsche::OperatorMode::DEC);
 
     std::unique_ptr<mfem::SparseMatrix> A = op_ptr->getFullDECSystem();

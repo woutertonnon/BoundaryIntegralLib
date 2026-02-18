@@ -56,14 +56,16 @@ Eigen::VectorXcd computeErrorOperatorEigenvalues(
     const mfem::Operator& mat,
     const mfem::Operator& prec,
     const int numEigenvalues,
-    const double tol, // <--- New Parameter
+    const double tol,
     const bool printResults)
 {
     ErrorOperator errorOp(mat, prec);
     SpectraAdapter spectraOp(errorOp);
 
-    const int ncv = std::min(2 * numEigenvalues + 1,
-                             errorOp.Height());
+    const int ncv = std::max(
+        32,
+        std::min(2 * numEigenvalues + 1, errorOp.Height())
+    );
 
     Spectra::GenEigsSolver<SpectraAdapter> eigs(
         spectraOp, numEigenvalues, ncv
@@ -82,16 +84,39 @@ Eigen::VectorXcd computeErrorOperatorEigenvalues(
 
         if (printResults)
         {
+            // Save previous cout state to restore later
+            std::ios oldState(nullptr);
+            oldState.copyfmt(std::cout);
+
             std::cout << "Spectra: Computed " << nConv << " converged eigenvalues for Error Operator.\n";
-            std::cout << "------------------------------------------------\n";
+            std::cout << std::string(75, '-') << "\n";
+
+            // Header
+            std::cout << std::left  << std::setw(6) << "Idx"
+            << std::right << std::setw(15) << "Real Part"
+            << std::setw(20) << "Imag Part"
+            << std::setw(18) << "Magnitude" << "\n";
+
+            std::cout << std::string(75, '-') << "\n";
+
+            // Formatting settings for numbers
+            std::cout << std::scientific << std::setprecision(6) << std::right;
+
             for (int i = 0; i < numEigenvalues; i++)
             {
                 std::complex<double> ev = results(i);
-                std::cout << "Eigenvalue " << i << ": "
-                          << ev.real() << (ev.imag() >= 0 ? " + " : " - ")
-                          << std::abs(ev.imag()) << "i  (Mag: " << std::abs(ev) << ")\n";
+                const char sign = (ev.imag() >= 0) ? '+' : '-';
+
+                std::cout << std::left  << std::setw(6) << i
+                << std::right << std::setw(15) << ev.real()
+                << "  " << sign << "  "
+                << std::setw(13) << std::abs(ev.imag()) << "i"
+                << std::setw(18) << std::abs(ev) << "\n";
             }
-            std::cout << "------------------------------------------------\n";
+            std::cout << std::string(75, '-') << "\n";
+
+            // Restore previous cout state
+            std::cout.copyfmt(oldState);
         }
     }
     else

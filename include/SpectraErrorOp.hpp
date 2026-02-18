@@ -42,7 +42,7 @@ Eigen::VectorXcd computeErrorOperatorEigenvalues(
     const mfem::Operator& prec,
     const int numEigenvalues = 1,
     const double tol = 1e-4,
-    const bool printResults = true
+    const bool printResults = false
 );
 
 #endif // SPECTRA_ERROR_OP_HPP

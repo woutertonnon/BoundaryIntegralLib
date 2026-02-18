@@ -143,7 +143,7 @@ StokesNitscheOperator::getFullGalerkinSystem() const
 
     std::unique_ptr<mfem::SparseMatrix> curlcurl, grad, gradT;
 
-    // 1. Gradient Block (G)
+    // Gradient Block (G)
     {
         auto G = std::make_unique<mfem::MixedBilinearForm>(
             h1_space_.get(), hcurl_space_.get()
@@ -154,10 +154,10 @@ StokesNitscheOperator::getFullGalerkinSystem() const
         grad = std::unique_ptr<mfem::SparseMatrix>(G->LoseMat());
     }
 
-    // 2. Divergence Block (G^T)
+    // Divergence Block (G^T)
     gradT = std::unique_ptr<mfem::SparseMatrix>(mfem::Transpose(*grad));
 
-    // 3. CurlCurl Block + Nitsche
+    // CurlCurl Block + Nitsche
     {
         auto cc = std::make_unique<mfem::BilinearForm>(hcurl_space_.get());
         cc->AddDomainIntegrator(new mfem::CurlCurlIntegrator(one));
@@ -169,7 +169,7 @@ StokesNitscheOperator::getFullGalerkinSystem() const
         );
     }
 
-    // 4. Mean Constraint Block
+    // Mean Constraint Block
     mfem::Array<int> cols(nv);
     for (int k = 0; k < nv; ++k)
         cols[k] = k;
@@ -205,10 +205,10 @@ StokesNitscheOperator::getFullDECSystem() const
     const mfem::Array<int> offsets({0, ne, ne + nv, ne + nv + 1});
     mfem::BlockMatrix block(offsets);
 
-    // 1. Gradient (d0)
+    // Gradient (d0)
     auto grad = std::make_unique<mfem::SparseMatrix>(d0_);
 
-    // 2. Divergence (scaled d0^T)
+    // Divergence (scaled d0^T)
     mfem::Vector inv_mass_h1(mass_h1_lumped_);
     inv_mass_h1.Reciprocal();
 
@@ -216,7 +216,7 @@ StokesNitscheOperator::getFullDECSystem() const
     gradT->ScaleRows(inv_mass_h1);
     gradT->ScaleColumns(mass_hcurl_lumped_);
 
-    // 3. CurlCurl
+    // CurlCurl
     std::unique_ptr<mfem::SparseMatrix> curlcurl;
     {
         auto tmp = std::make_unique<mfem::SparseMatrix>(d1_);
@@ -237,7 +237,7 @@ StokesNitscheOperator::getFullDECSystem() const
         curlcurl->ScaleRows(inv_mass_hcurl);
     }
 
-    // 4. Mean Constraint
+    // Mean Constraint
     mfem::Array<int> cols(nv);
     for (int k = 0; k < nv; ++k)
         cols[k] = k;
@@ -248,7 +248,7 @@ StokesNitscheOperator::getFullDECSystem() const
 
     auto meanT = std::unique_ptr<mfem::SparseMatrix>(mfem::Transpose(mean));
 
-    // 5. Assemble
+    // Assemble
     block.SetBlock(0, 0, curlcurl.get());
     block.SetBlock(0, 1, grad.get());
     block.SetBlock(1, 0, gradT.get());
@@ -333,7 +333,7 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x, mfem::Vector& y) cons
     mfem::Vector tmp_u(y_u.Size());
     mfem::Vector tmp_du(hdiv_or_l2_space_->GetNDofs());
 
-    // 1. Curl-Curl part
+    // Curl-Curl part
     d1_.Mult(x_u, tmp_du);
     tmp_du *= mass_hdiv_or_l2_lumped_;
     d1_.MultTranspose(tmp_du, y_u);
@@ -342,10 +342,10 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x, mfem::Vector& y) cons
 
     y_u /= mass_hcurl_lumped_;
 
-    // 2. Gradient part
+    // Gradient part
     d0_.AddMult(x_p, y_u);
 
-    // 3. Divergence part
+    // Divergence part
     tmp_u = x_u;
     tmp_u *= mass_hcurl_lumped_;
     d0_.MultTranspose(tmp_u, y_p);
@@ -354,7 +354,7 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x, mfem::Vector& y) cons
 }
 
 void StokesNitscheOperator::MultGalerkin(const mfem::Vector& x,
-                                         mfem::Vector& y) const
+                                               mfem::Vector& y) const
 {
     const int nv = mesh_->GetNV();
     const int ne = mesh_->GetNEdges();
@@ -372,20 +372,20 @@ void StokesNitscheOperator::MultGalerkin(const mfem::Vector& x,
     mfem::Vector tmp_du(hdiv_or_l2_space_->GetNDofs());
     mfem::Vector tmp_mdu(hdiv_or_l2_space_->GetNDofs());
 
-    // 1. Curl-Curl Term
+    // Curl-Curl Term
     d1_.Mult(x_u, tmp_du);
     mass_hdiv_or_l2_->Mult(tmp_du, tmp_mdu);
     d1_.MultTranspose(tmp_mdu, y_u);
 
-    // 2. Gradient Term
+    // Gradient Term
     d0_.Mult(x_p, tmp_u);
     mass_hcurl_->AddMult(tmp_u, y_u);
 
-    // 3. Divergence Term
+    // Divergence Term
     mass_hcurl_->Mult(x_u, tmp_u);
     d0_.MultTranspose(tmp_u, y_p);
 
-    // 4. Nitsche Boundary Term
+    // Nitsche Boundary Term
     nitsche_->AddMult(x_u, y_u);
 }
 
