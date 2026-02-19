@@ -25,6 +25,7 @@ public:
      * setOperatorMode(StokesNitsche::OperatorMode::Galerkin)
      * before passing it as a precontioner. */
     StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
+             const unsigned order,
              const double theta,
              const double penalty,
              const double factor,
@@ -130,6 +131,7 @@ private:
 #endif
 
     const double theta_, penalty_, factor_;
+    const unsigned order_;
     const MassLumping ml_;
     const SmootherType st_;
 

@@ -17,6 +17,7 @@ class StokesNitscheOperator : public mfem::Operator
 {
 public:
     StokesNitscheOperator(std::shared_ptr<mfem::Mesh> mesh_ptr,
+                          const unsigned order,
                           const double theta,
                           const double penalty,
                           const double factor,
@@ -54,6 +55,7 @@ public:
 
     const mfem::Mesh& getMesh() const { return *mesh_; }
     const mfem::Array<int>& getOffsets() const { return offsets_; }
+    unsigned getOrder() const { return order_; }
 
     std::unique_ptr<mfem::SparseMatrix> getFullGalerkinSystem() const;
     std::unique_ptr<mfem::SparseMatrix> getFullDECSystem() const;
@@ -76,8 +78,9 @@ private:
     void initNitsche(const double theta, const double penalty, const double factor);
 
     std::shared_ptr<mfem::Mesh> mesh_;
+    const unsigned order_;
     const MassLumping ml_;
-    const mfem::Array<int> offsets_;
+    mfem::Array<int> offsets_;
     mutable OperatorMode opmode_ = OperatorMode::Galerkin;
 
     std::unique_ptr<mfem::FiniteElementCollection> h1_fec_;

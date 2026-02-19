@@ -1,125 +1,60 @@
 #include "incidence.hpp"
+#include <stdexcept>
 
-mfem::SparseMatrix assembleVertexEdge(const mfem::Mesh& mesh)
+mfem::SparseMatrix assembleDiscreteGradient(mfem::FiniteElementSpace* h1,
+                                            mfem::FiniteElementSpace* hcurl)
 {
-  // Number of edges and vertices
-  const int nv = mesh.GetNV(),
-            ne = mesh.GetNEdges();
-  mfem::SparseMatrix D(ne, nv);
+    // 1. Verify the meshes match
+    MFEM_VERIFY(h1->GetMesh() == hcurl->GetMesh(),
+                "H1 and H(curl) spaces must be defined on the same mesh!");
 
-  mfem::Array<int> vert(2), cols(2);
-  mfem::Vector srow(2);
-  for(int ei = 0; ei < ne; ++ei)
-  {
-    // Get vertices of edge `ei`
-    mesh.GetEdgeVertices(ei, vert);
-    const int sign = (vert[0] < vert[1] ? 1 : -1);
-    // Add to matrix
-    //cols[0] = vert[0];
-    srow[0] = -sign;
+    // 2. Verify De Rham complex components (Lagrangian -> Nedelec)
+    auto h1_fec = dynamic_cast<const mfem::H1_FECollection*>(h1->FEColl());
+    auto nd_fec = dynamic_cast<const mfem::ND_FECollection*>(hcurl->FEColl());
 
-    //cols[1] = vert[1];
-    srow[1] = sign;
+    MFEM_VERIFY(h1_fec != nullptr, "Domain space must use an H1_FECollection (Lagrangian).");
+    MFEM_VERIFY(nd_fec != nullptr, "Range space must use an ND_FECollection (Nedelec).");
 
-    D.AddRow(ei, vert, srow);
-  }
+    // 3. Verify polynomial orders are high enough and compatible
+    const int p_h1 = h1_fec->GetOrder();
+    const int p_nd = nd_fec->GetOrder();
+    MFEM_VERIFY(p_h1 == p_nd,
+                "Discrete De Rham complex requires H1 and H(curl) to have the exact same polynomial order!");
 
-  D.Finalize();
-  return D;
+    // 4. Assemble the exact discrete gradient operator
+    mfem::DiscreteLinearOperator grad(h1, hcurl);
+    grad.AddDomainInterpolator(new mfem::GradientInterpolator());
+    grad.Assemble();
+    grad.Finalize();
+
+    return *grad.LoseMat();
 }
 
-mfem::SparseMatrix assembleFaceEdge(const mfem::Mesh& mesh,
-                                    const int DIM)
+mfem::SparseMatrix assembleDiscreteCurl(mfem::FiniteElementSpace* hcurl,
+                                        mfem::FiniteElementSpace* hdiv)
 {
-  int ne = mesh.GetNEdges(),
-      nf = -1;
+    // 1. Verify the meshes match
+    MFEM_VERIFY(hcurl->GetMesh() == hdiv->GetMesh(),
+                "H(curl) and H(div) spaces must be defined on the same mesh!");
 
-  assert(DIM == 2 || DIM == 3);
+    // 2. Verify De Rham complex components (Nedelec -> Raviart-Thomas)
+    auto nd_fec = dynamic_cast<const mfem::ND_FECollection*>(hcurl->FEColl());
+    auto rt_fec = dynamic_cast<const mfem::RT_FECollection*>(hdiv->FEColl());
 
-  if(DIM == 3)
-    nf = mesh.GetNFaces();
-  else
-    nf = mesh.GetNE();
+    MFEM_VERIFY(nd_fec != nullptr, "Domain space must use an ND_FECollection (Nedelec).");
+    MFEM_VERIFY(rt_fec != nullptr, "Range space must use an RT_FECollection (Raviart-Thomas).");
 
-  mfem::SparseMatrix D(nf, ne);
+    // 3. Verify polynomial orders match the sequence (ND is p, RT is p-1)
+    const int p_nd = nd_fec->GetOrder();
+    const int p_rt = rt_fec->GetOrder();
+    MFEM_VERIFY(p_nd == p_rt,
+                "Discrete De Rham complex requires H(div) order to be exactly one less than H(curl) order!");
 
-  mfem::Array<int> edges, ori;
-  mfem::Vector srow;
-  for(int fi = 0; fi < nf; ++fi)
-  {
-    const mfem::Geometry::Type face_type = (
-      DIM == 3 ? mesh.GetFaceGeometry(fi) : mesh.GetElementGeometry(fi)
-    );
-    const int num_edges = mfem::Geometry::NumEdges[face_type];
-    // Re-size bc mfem does
-    // not do it
-    srow.SetSize(num_edges);
-    // Get edges and orientations of element fi
-    if(DIM == 3)
-      mesh.GetFaceEdges(fi, edges, ori);
-    else
-      mesh.GetElementEdges(fi, edges, ori);
+    // 4. Assemble the exact discrete curl operator
+    mfem::DiscreteLinearOperator curl(hcurl, hdiv);
+    curl.AddDomainInterpolator(new mfem::CurlInterpolator());
+    curl.Assemble();
+    curl.Finalize();
 
-    for(unsigned int k = 0; k < num_edges; ++k)
-      srow(k) = static_cast<double>(ori[k]);
-    // Add to matrix
-    D.AddRow(fi, edges, srow);
-  }
-
-  D.Finalize();
-  return D;
-}
-
-mfem::SparseMatrix assembleElementFace(const mfem::Mesh& mesh)
-{
-    const int nel = mesh.GetNE(),
-              nf = mesh.GetNFaces();
-
-    mfem::SparseMatrix D(nel, nf);
-
-    mfem::Array<int> faces, face_ori;
-    mfem::Vector srow;
-
-    for(int eli = 0; eli < nel; ++eli)
-    {
-        mesh.GetElementFaces(eli, faces, face_ori);
-        srow.SetSize(faces.Size());
-
-        for(int k = 0; k < faces.Size(); ++k)
-            srow(k) = (face_ori[k] % 2 == 0 ? 1.0 : -1.0);
-
-        D.AddRow(eli, faces, srow);
-    }
-
-    D.Finalize();
-    return D;
-}
-
-mfem::SparseMatrix assembleElementFace_(const mfem::Mesh& mesh)
-{
-  const int nel = mesh.GetNE(),
-            nf = mesh.GetNFaces();
-  mfem::SparseMatrix D(nel, nf);
-
-  mfem::Array<int> faces(4), face_ori(4),
-  edges(3), edge_ori(3);
-  mfem::Vector srow(4);
-
-  for(int eli = 0; eli < nel; ++eli)
-  {
-    MFEM_ASSERT(
-      mesh.GetElementType(eli) == mfem::Element::TETRAHEDRON,
-      "assembleElementFace: Only tetrahedra are supported, to be fixed."
-    );
-    // Get edges and orientations of faces
-    mesh.GetElementFaces(eli, faces, face_ori);
-    // Add to matrix
-    for(unsigned int k = 0; k < 4; ++k)
-      srow[k] = (face_ori[k] % 2 == 0 ? 1 : -1);
-
-    D.AddRow(eli, faces, srow);
-  }
-
-  D.Finalize();
-  return D;
+    return *curl.LoseMat();
 }

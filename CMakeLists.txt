@@ -31,14 +31,14 @@ enable_testing()
 
 # LTO
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT result OUTPUT output)
-
-if(result)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-else()
-    message(STATUS "LTO not supported: ${output}")
-endif()
+# include(CheckIPOSupported)
+# check_ipo_supported(RESULT result OUTPUT output)
+#
+# if(result)
+#     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+# else()
+#     message(STATUS "LTO not supported: ${output}")
+# endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(MFEM_USE_OPENMP YES)

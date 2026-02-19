@@ -5,12 +5,14 @@ namespace StokesNitsche
 {
 
 StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
+                   const unsigned order,
                    const double theta,
                    const double penalty,
                    const double factor,
                    const MassLumping ml,
                    const SmootherType st)
     : mfem::Solver(0, 0),
+      order_(order),
       theta_(theta),
       penalty_(penalty),
       factor_(factor),
@@ -20,7 +22,7 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
     iterative_mode = true;
 
     auto op = std::make_shared<StokesNitscheOperator>(
-        coarse_mesh, theta_, penalty_, factor_, ml_
+        coarse_mesh, order_, theta_, penalty_, factor_, ml_
     );
     // op->setDECMode();
     auto smoother = std::make_shared<StokesNitscheDGS>(op, st_);
@@ -63,7 +65,7 @@ void StokesMG::addRefinedLevel()
     fine_mesh->UniformRefinement();
 
     auto fine_op = std::make_shared<StokesNitscheOperator>(
-        fine_mesh, theta_, penalty_, factor_, ml_
+        fine_mesh, order_, theta_, penalty_, factor_, ml_
     );
     // fine_op->setDECMode();
     auto fine_smoother = std::make_shared<StokesNitscheDGS>(fine_op, st_);
@@ -216,8 +218,8 @@ void StokesMG::Mult(const mfem::Vector& b, mfem::Vector& x) const
         const mfem::Vector& M_u = finest_op.getMassHCurlLumped();
         const mfem::Vector& M_p = finest_op.getMassH1Lumped();
 
-        const int nv = finest_op.getMesh().GetNV(),
-                  ne = finest_op.getMesh().GetNEdges();
+        const int nv = finest_op.getH1Space().GetNDofs(),
+                  ne = finest_op.getHCurlSpace().GetNDofs();
 
         const mfem::Vector b_u(b.GetData(), ne);
         const mfem::Vector b_p(b.GetData() + ne, nv);

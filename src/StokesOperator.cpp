@@ -8,11 +8,13 @@ namespace StokesNitsche
 
 void StokesNitscheOperator::initFESpaces()
 {
+    MFEM_VERIFY(order_ > 0,
+                "StokesNitscheOperator: order == 0, use order > 0");
     const int dim = mesh_->Dimension();
 
     // 1. Create Collections
-    h1_fec_ = std::make_unique<mfem::H1_FECollection>(1, dim);
-    hcurl_fec_ = std::make_unique<mfem::ND_FECollection>(1, dim);
+    h1_fec_ = std::make_unique<mfem::H1_FECollection>(order_, dim);
+    hcurl_fec_ = std::make_unique<mfem::ND_FECollection>(order_, dim);
 
     if (dim == 2)
         hdiv_or_l2_fec_ = std::make_unique<mfem::L2_FECollection>(
@@ -20,7 +22,9 @@ void StokesNitscheOperator::initFESpaces()
             mfem::FiniteElement::INTEGRAL
         );
     else
-        hdiv_or_l2_fec_ = std::make_unique<mfem::RT_FECollection>(0, dim);
+        hdiv_or_l2_fec_ = std::make_unique<mfem::RT_FECollection>(
+            order_ - 1, dim
+        );
 
     // 2. Create Spaces
     h1_space_ = std::make_unique<mfem::FiniteElementSpace>(
@@ -32,14 +36,16 @@ void StokesNitscheOperator::initFESpaces()
     hdiv_or_l2_space_ = std::make_unique<mfem::FiniteElementSpace>(
         mesh_.get(), hdiv_or_l2_fec_.get()
     );
+
+    // Need to do this, cannot (easily) be done in the constructor
+    this->height = h1_space_->GetNDofs() + hcurl_space_->GetNDofs();
+    this->width = this->height;
 }
 
 void StokesNitscheOperator::initIncidence()
 {
-    const int dim = mesh_->Dimension();
-
-    d0_ = assembleVertexEdge(*mesh_);
-    d1_ = assembleFaceEdge(*mesh_, dim);
+    d0_ = assembleDiscreteGradient(h1_space_.get(), hcurl_space_.get());
+    d1_ = assembleDiscreteCurl(hcurl_space_.get(), hdiv_or_l2_space_.get());
 }
 
 void StokesNitscheOperator::initMass()
@@ -51,7 +57,6 @@ void StokesNitscheOperator::initMass()
     );
 
     mfem::ConstantCoefficient one(1.0);
-    mfem::ConstantCoefficient four(4.0);
 
     mass_h1_->AddDomainIntegrator(new mfem::MassIntegrator(one));
     mass_hcurl_->AddDomainIntegrator(
@@ -60,11 +65,11 @@ void StokesNitscheOperator::initMass()
 
     if (mesh_->Dimension() == 2)
         mass_hdiv_or_l2_->AddDomainIntegrator(
-            new mfem::MassIntegrator(four)
+            new mfem::MassIntegrator(one)
         );
     else
         mass_hdiv_or_l2_->AddDomainIntegrator(
-            new mfem::VectorFEMassIntegrator(four)
+            new mfem::VectorFEMassIntegrator(one)
         );
 
     mass_h1_->Assemble();
@@ -96,6 +101,8 @@ void StokesNitscheOperator::initLumpedMass()
             throw std::logic_error(
                 "BARYCENTRIC mass lumping not implemented (yet)"
             );
+        default:
+            std::unreachable();
     }
 }
 
@@ -115,20 +122,29 @@ void StokesNitscheOperator::initNitsche(const double theta,
 
 StokesNitscheOperator::StokesNitscheOperator(
     std::shared_ptr<mfem::Mesh> mesh_ptr,
+    const unsigned order,
     const double theta,
     const double penalty,
     const double factor,
     const MassLumping ml)
-    : mfem::Operator(mesh_ptr->GetNV() + mesh_ptr->GetNEdges()),
+    : mfem::Operator(),
+      order_(order),
       mesh_(mesh_ptr),
-      ml_(ml),
-      offsets_({0, mesh_ptr->GetNEdges(), mesh_ptr->GetNV() + mesh_ptr->GetNEdges()})
+      ml_(ml)
 {
     initFESpaces();
     initIncidence();
     initMass();
     initLumpedMass();
     initNitsche(theta, penalty, factor);
+
+    offsets_.SetSize(3);
+    offsets_[0] = 0;
+    offsets_[1] = hcurl_space_->GetNDofs();
+    offsets_[2] = hcurl_space_->GetNDofs() +
+                  h1_space_->GetNDofs();
+    // offsets_[3] = hcurl_space_->GetNDofs() +
+                  // h1_space_->GetNDofs() + 1;
 }
 
 // -------------------------------------------------------------------------
@@ -139,8 +155,8 @@ std::unique_ptr<mfem::SparseMatrix>
 StokesNitscheOperator::getFullGalerkinSystem() const
 {
     mfem::ConstantCoefficient one(1.0);
-    const int nv = mesh_->GetNV();
-    const int ne = mesh_->GetNEdges();
+    const int nv = h1_space_->GetNDofs();
+    const int ne = hcurl_space_->GetNDofs();
 
     const mfem::Array<int> offsets({0, ne, ne + nv, ne + nv + 1});
     mfem::BlockMatrix block(offsets);
@@ -181,10 +197,12 @@ StokesNitscheOperator::getFullGalerkinSystem() const
         cols[k] = k;
 
     mfem::SparseMatrix mean(1, nv);
-    mfem::Vector ones(nv);
+
+    mfem::GridFunction ones(h1_space_.get());
+    ones.ProjectCoefficient(one);
+
     mfem::Vector mass_x_ones(nv);
 
-    ones = 1.0;
     mass_h1_->Mult(ones, mass_x_ones);
 
     mean.AddRow(0, cols, mass_x_ones);
@@ -205,8 +223,8 @@ StokesNitscheOperator::getFullGalerkinSystem() const
 std::unique_ptr<mfem::SparseMatrix>
 StokesNitscheOperator::getFullDECSystem() const
 {
-    const int nv = mesh_->GetNV();
-    const int ne = mesh_->GetNEdges();
+    const int nv = h1_space_->GetNDofs();
+    const int ne = hcurl_space_->GetNDofs();
 
     const mfem::Array<int> offsets({0, ne, ne + nv, ne + nv + 1});
     mfem::BlockMatrix block(offsets);
@@ -277,9 +295,11 @@ void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
 {
     MFEM_ASSERT(x.Size() == this->NumCols(), "Vector size mismatch");
 
-    const int nv = mesh_->GetNV();
-    const int ne = mesh_->GetNEdges();
+    const int nv = h1_space_->GetNDofs();
+    const int ne = hcurl_space_->GetNDofs();
 
+    std::cerr << "eliminateConstants needs to be fixed" << std::endl;
+    std::abort();
     mfem::Vector ones(nv);
     ones = 1.0;
 
@@ -322,8 +342,8 @@ void StokesNitscheOperator::Mult(const mfem::Vector& x, mfem::Vector& y) const
 
 void StokesNitscheOperator::MultDEC(const mfem::Vector& x, mfem::Vector& y) const
 {
-    const int nv = mesh_->GetNV();
-    const int ne = mesh_->GetNEdges();
+    const int nv = h1_space_->GetNDofs();
+    const int ne = hcurl_space_->GetNDofs();
 
     MFEM_ASSERT(x.Size() == nv + ne && y.Size() == nv + ne,
         "Vector size mismatch");
@@ -360,8 +380,8 @@ void StokesNitscheOperator::MultDEC(const mfem::Vector& x, mfem::Vector& y) cons
 void StokesNitscheOperator::MultGalerkin(const mfem::Vector& x,
                                                mfem::Vector& y) const
 {
-    const int nv = mesh_->GetNV();
-    const int ne = mesh_->GetNEdges();
+    const int nv = h1_space_->GetNDofs();
+    const int ne = hcurl_space_->GetNDofs();
 
     MFEM_ASSERT(x.Size() == nv + ne && y.Size() == nv + ne,
         "Vector size mismatch");

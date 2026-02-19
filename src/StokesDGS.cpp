@@ -78,9 +78,9 @@ void StokesNitscheDGS::computeResidual(const mfem::Vector& x,
 
 void StokesNitscheDGS::computeCorrection(const SmootherType st) const
 {
-    const mfem::Mesh& mesh = op_->getMesh();
-    const int nv = mesh.GetNV();
-    const int ne = mesh.GetNEdges();
+    // const mfem::Mesh& mesh = op_->getMesh();
+    const int nv = op_->getH1Space().GetNDofs();
+    const int ne = op_->getHCurlSpace().GetNDofs();
 
     mfem::Vector r_u(residual_, 0, ne);
     mfem::Vector r_p(residual_, ne, nv);
@@ -133,7 +133,7 @@ StokesNitscheDGS::StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
     : mfem::Solver(op->NumRows(), true),
       op_(op),
       st_(type),
-      id_u_(op->getMesh().GetNEdges()),
+      id_u_(op->getHCurlSpace().GetNDofs()),
       residual_(op->NumRows()),
       corr_(op->NumRows())
 {
