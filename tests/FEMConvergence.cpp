@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <algorithm> // For std::max
 
 // --- Configuration ---
 constexpr bool DIRECT_SOLVE = false;
@@ -89,7 +90,9 @@ void f_rhs_func(const mfem::Vector& x, mfem::Vector& f)
 }
 
 // --- Convergence Study ---
-void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs, bool save_solution = false)
+void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
+                      const int max_refs,
+                      const bool save_solution = false)
 {
     constexpr double THETA   = 1.0;
     constexpr double PENALTY = 10.0;
@@ -112,12 +115,14 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs, 
 
     std::cout << "\n" << (DIRECT_SOLVE ? "Using UMFPACK (Direct)" : "Using Multigrid Preconditioned GMRES") << "\n\n";
 
+    // Updated Header to include mesh width (h)
     std::cout << std::setw(6)  << "Level"
+              << std::setw(12) << "h_max"
               << std::setw(12) << "DOFs"
               << std::setw(10) << "Iters"
               << std::setw(14) << "HCurl(u)" << std::setw(8) << "Rate"
               << std::setw(14) << "H1(p)" << std::setw(8) << "Rate\n";
-    std::cout << std::string(72, '-') << std::endl;
+    std::cout << std::string(84, '-') << std::endl;
 
     double err_u_prev = 0.0, err_p_prev = 0.0;
 
@@ -134,19 +139,20 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs, 
     for (int l = 0; l <= max_refs; ++l)
     {
         if (l > 0)
-        {
             mg_solver.addRefinedLevel();
-        }
 
         StokesNitsche::StokesNitscheOperator& op =
             *const_cast<StokesNitsche::StokesNitscheOperator*>(&mg_solver.getFinestOperator());
 
         mfem::Mesh& current_mesh = const_cast<mfem::Mesh&>(op.getMesh());
 
+        // Calculate maximum mesh width (h_max)
+        double h_max = 0.0;
+        for (int i = 0; i < current_mesh.GetNE(); ++i)
+            h_max = std::max(h_max, current_mesh.GetElementSize(i));
+
         if (save_solution)
-        {
             pd->SetMesh(&current_mesh);
-        }
 
         op.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
 
@@ -161,8 +167,12 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs, 
         mfem::FiniteElementSpace& h1 = op.getH1Space();
 
         mfem::LinearForm fu(&hcurl, rhs.GetData());
-        fu.AddBdrFaceIntegrator(new ND_NitscheLFIntegrator(THETA, PENALTY, u_coeff, FACTOR));
-        fu.AddDomainIntegrator(new mfem::VectorFEDomainLFIntegrator(f_coeff));
+        fu.AddBdrFaceIntegrator(
+            new ND_NitscheLFIntegrator(THETA, PENALTY, u_coeff, FACTOR)
+        );
+        fu.AddDomainIntegrator(
+            new mfem::VectorFEDomainLFIntegrator(f_coeff)
+        );
         fu.Assemble();
 
         mfem::Vector x(nu + np + extra_dofs);
@@ -202,7 +212,9 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs, 
 
         int iters = DIRECT_SOLVE ? 1 : gmres.GetNumIterations();
 
+        // Output with h_max included
         std::cout << std::setw(6)  << l
+                  << std::scientific << std::setprecision(4) << std::setw(12) << h_max
                   << std::setw(12) << op.Height()
                   << std::setw(10) << iters
                   << std::scientific << std::setprecision(3)
@@ -230,18 +242,21 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs, 
             pd->Save();
         }
     }
-    std::cout << std::string(72, '-') << "\n" << std::endl;
+    std::cout << std::string(84, '-') << "\n" << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
+#ifdef MFEM_USE_OPENMP
+    mfem::Device("omp");
+#endif
     const unsigned int n = 1;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
         mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
     );
 
-    // Call with the default (false), or pass 'true' to enable saving.
-    RunStokesMGStudy(mesh_ptr, 6);
+    const bool save_results = false;
+    RunStokesMGStudy(mesh_ptr, 6, save_results);
 
     return 0;
 }

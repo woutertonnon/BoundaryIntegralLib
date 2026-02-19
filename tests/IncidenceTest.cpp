@@ -130,7 +130,7 @@ TEST(IncidenceTest, CurlCurl2D)
     mfem::ConstantCoefficient four(4.0);
 
     mfem::Mesh mesh = mfem::Mesh::MakeCartesian2D(
-        n, n, el_type
+        n, n, el_type, std::sqrt(2), std::sqrt(3)
     );
 
     const int nv = mesh.GetNV(),
@@ -230,7 +230,7 @@ TEST(IncidenceTest, CurlCurl3D)
     mfem::ConstantCoefficient four(4.0);
 
     mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
-        n, n + 1, n + 2, el_type
+        n, n + 1, n + 2, el_type, std::sqrt(2), std::sqrt(3), std::sqrt(5)
     );
 
     const int nv = mesh.GetNV(),
