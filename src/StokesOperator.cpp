@@ -160,7 +160,7 @@ StokesNitscheOperator::getFullGalerkinSystem() const
         grad = std::unique_ptr<mfem::SparseMatrix>(G->LoseMat());
     }
 
-    // Divergence Block (G^T)
+    // -Divergence Block (G^T)
     gradT = std::unique_ptr<mfem::SparseMatrix>(mfem::Transpose(*grad));
 
     // CurlCurl Block + Nitsche

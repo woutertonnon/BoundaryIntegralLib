@@ -18,6 +18,9 @@ add_executable(spectraop_tests
 add_executable(boundaryoperators_tests
     BoundaryOperatorsTests.cpp
 )
+add_executable(nitscheconvergence
+    NitscheCVGTest.cpp
+)
 add_executable(stokesoperator_tests
     StokesOperatorTest.cpp
 )
@@ -76,6 +79,19 @@ target_link_libraries(spectraop_tests
 )
 
 target_link_libraries(boundaryoperators_tests
+    PRIVATE
+        boundaryoperatorslib
+        mfem
+        # Prefer imported targets when available (CMake >= 3.5)
+        $<$<TARGET_EXISTS:GTest::gtest>:GTest::gtest>
+        $<$<TARGET_EXISTS:GTest::gtest_main>:GTest::gtest_main>
+        # Fallback for older FindGTest modules
+        ${GTEST_LIBRARIES}
+        ${GTEST_MAIN_LIBRARIES}
+        pthread
+)
+
+target_link_libraries(nitscheconvergence
     PRIVATE
         boundaryoperatorslib
         mfem

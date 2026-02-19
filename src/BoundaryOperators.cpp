@@ -113,6 +113,7 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
       const mfem::IntegrationPoint &ip_elem = Tr.Elem1->GetIntPoint();
 
       // Face normal at this quadrature point
+      Tr.Face->SetIntPoint(&ip_face);
       mfem::CalcOrtho(Tr.Face->Jacobian(), normal);
       double area = normal.Norml2();
       double h = sqrt(area);
@@ -148,7 +149,6 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
 
          elvect.Elem(k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
          elvect.Elem(k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
-
       }
    }
 }

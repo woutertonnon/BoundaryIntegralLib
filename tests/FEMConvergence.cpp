@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+#define DIRECT_SOLVE true
+
 void u_exact_func(const mfem::Vector& x, mfem::Vector& u)
 {
     u(0) = x(1) * x(1);
@@ -42,9 +44,9 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs)
     mfem::FunctionCoefficient p_coeff(p_exact_func);
     mfem::VectorFunctionCoefficient f_coeff(3, f_rhs_func);
 
-    std::cout << "\n======================================================================\n";
-    std::cout << " Stokes-Nitsche Geometric Multigrid Convergence Study ";
-    std::cout << "======================================================================\n";
+    std::cout << (DIRECT_SOLVE ? "Using UMFPACK" : "Using MG")
+              << std::endl << std::endl;;
+
     std::cout << std::setw(10) << "Level"
               << std::setw(15) << "DOFs"
               << std::setw(15) << "GMRES Iters"
@@ -76,7 +78,7 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs)
         const unsigned int nu = op.getHCurlSpace().GetNDofs(),
                            np = op.getH1Space().GetNDofs();
 
-        mfem::Vector rhs(nu + np);
+        mfem::Vector rhs(nu + np + DIRECT_SOLVE);
         rhs = 0.0;
 
         mfem::FiniteElementSpace& hcurl = op.getHCurlSpace();
@@ -84,29 +86,39 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs)
 
         mfem::LinearForm fu(&hcurl, rhs.GetData());
         fu.AddBdrFaceIntegrator(
-          new ND_NitscheLFIntegrator(theta, penalty, u_coeff, factor)
+            new ND_NitscheLFIntegrator(theta, penalty, u_coeff, factor)
         );
         fu.AddDomainIntegrator(
-          new mfem::VectorFEDomainLFIntegrator(f_coeff)
+            new mfem::VectorFEDomainLFIntegrator(f_coeff)
         );
         fu.Assemble();
 
-        mfem::Vector x(nu + np);
+        mfem::Vector x(nu + np + DIRECT_SOLVE);
         x = 0.0;
 
-        // --- Solve ---
+
         mfem::GMRESSolver gmres;
-        gmres.SetAbsTol(1e-12);
-        gmres.SetRelTol(1e-9);
-        gmres.SetMaxIter(500);
-        gmres.SetPrintLevel(0);
-        gmres.SetOperator(op);
-        gmres.SetPreconditioner(mg_solver);
-        gmres.SetKDim(128);
 
-        gmres.Mult(rhs, x);
-        op.eliminateConstants(x);
+        if(DIRECT_SOLVE)
+        {
+            mfem::UMFPackSolver solver;
+            mfem::SparseMatrix A = *op.getFullGalerkinSystem();
+            solver.SetOperator(A);
+            solver.Mult(rhs, x);
+        }
+        else
+        {
+            gmres.SetAbsTol(1e-12);
+            gmres.SetRelTol(1e-9);
+            gmres.SetMaxIter(500);
+            gmres.SetPrintLevel(0);
+            gmres.SetOperator(op);
+            gmres.SetPreconditioner(mg_solver);
+            gmres.SetKDim(128);
 
+            gmres.Mult(rhs, x);
+            op.eliminateConstants(x);
+        }
         // mfem::Vector x_u(x.GetData(), nu);
         // mfem::Vector x_p(x.GetData() + nu, np);
         //
@@ -121,8 +133,8 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr, const int max_refs)
         mfem::GridFunction u_h(&hcurl, x.GetData());
         mfem::GridFunction p_h(&h1, x.GetData() + nu);
 
-        const double err_u = u_h.ComputeL2Error(u_coeff);
-        // const double err_p = p_h.ComputeL2Error(p_coeff);
+        const double err_u = u_h.ComputeL2Error(u_coeff),
+                     err_p = p_h.ComputeL2Error(p_coeff);
 
         double rate = 0.0;
         if (l > 0)
