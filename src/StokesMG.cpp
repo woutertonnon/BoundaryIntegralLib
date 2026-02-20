@@ -166,30 +166,27 @@ void StokesMG::addRefinement(const RefinementType reftype,
 struct TransferOperator : public mfem::Operator
 {
     const std::unique_ptr<const mfem::Operator> P;
-    const mfem::Vector& Mc, Mf;
+    const mfem::Vector& Mc;
+    const mfem::Vector& Mf;
     mutable mfem::Vector tmp;
 
     // TAKES OWNERSHIP OF P
     TransferOperator(mfem::Operator* prol,
                      const mfem::Vector& Mcoarse,
-                     const mfem::Vector& Mfine
-    ): mfem::Operator(Mfine.Size(), Mcoarse.Size()),
-       P(prol), Mc(Mcoarse), Mf(Mfine), tmp(Mcoarse.Size()) {}
+                     const mfem::Vector& Mfine)
+        : mfem::Operator(Mfine.Size(), Mcoarse.Size()),
+          P(prol), Mc(Mcoarse), Mf(Mfine), tmp(Mfine.Size()) {}
 
-    virtual void Mult(const mfem::Vector& x,
-                            mfem::Vector& y) const override
+    void Mult(const mfem::Vector& x, mfem::Vector& y) const override
     {
         P->Mult(x, y);
     }
 
-    virtual void MultTranspose(const mfem::Vector& x,
-                                     mfem::Vector& y) const override
+    void MultTranspose(const mfem::Vector& x, mfem::Vector& y) const override
     {
         tmp = x;
         tmp *= Mf;
-
         P->MultTranspose(tmp, y);
-
         y /= Mc;
     }
 };
@@ -203,49 +200,43 @@ void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
         fine.getOffsets(), coarse.getOffsets()
     );
 
+    auto create_transfer = [&](const mfem::FiniteElementSpace& c_fes,
+                               const mfem::FiniteElementSpace& f_fes,
+                               const mfem::Vector& c_mass,
+                               const mfem::Vector& f_mass) -> mfem::Operator*
     {
-        mfem::Operator* T_u_op;
+        mfem::Operator* base_P = nullptr;
 
-        if(reftype == RefinementType::Geometric)
+        if (reftype == RefinementType::Geometric)
         {
-            mfem::OperatorPtr T_u;
-            fine.getHCurlSpace().GetTransferOperator(coarse.getHCurlSpace(), T_u);
-            T_u.SetOperatorOwner(false);
-
-            T_u_op = new TransferOperator(
-                T_u.Ptr(), coarse.getMassHCurlLumped(), fine.getMassHCurlLumped()
-            );
+            mfem::OperatorPtr P_ptr;
+            f_fes.GetTransferOperator(c_fes, P_ptr);
+            P_ptr.SetOperatorOwner(false); // We take ownership
+            base_P = P_ptr.Ptr();
         }
         else // p-refinement
         {
-            T_u_op = new mfem::PRefinementTransferOperator(
-                coarse.getHCurlSpace(), fine.getHCurlSpace()
-            );
+            base_P = new mfem::PRefinementTransferOperator(c_fes, f_fes);
         }
-        T_block->SetBlock(0, 0, T_u_op);
-    }
 
-    {
-        mfem::Operator* T_p_op;
+        return new TransferOperator(base_P, c_mass, f_mass);
+    };
 
-        if(reftype == RefinementType::Geometric)
-        {
-            mfem::OperatorPtr T_p;
-            fine.getH1Space().GetTransferOperator(coarse.getH1Space(), T_p);
-            T_p.SetOperatorOwner(false);
+    // --- H(curl) Block ---
+    T_block->SetBlock(0, 0,
+        create_transfer(
+            coarse.getHCurlSpace(), fine.getHCurlSpace(),
+            coarse.getMassHCurlLumped(), fine.getMassHCurlLumped()
+        )
+    );
 
-            T_p_op = new TransferOperator(
-                T_p.Ptr(), coarse.getMassH1Lumped(), fine.getMassH1Lumped()
-            );
-        }
-        else
-        {
-            T_p_op = new mfem::PRefinementTransferOperator(
-                coarse.getH1Space(), fine.getH1Space()
-            );
-        }
-        T_block->SetBlock(1, 1, T_p_op);
-    }
+    // --- H1 Block ---
+    T_block->SetBlock(1, 1,
+        create_transfer(
+            coarse.getH1Space(), fine.getH1Space(),
+            coarse.getMassH1Lumped(), fine.getMassH1Lumped()
+        )
+    );
 
     T_block->owns_blocks = 1;
     T = std::move(T_block);
@@ -290,14 +281,25 @@ void StokesMG::cycle(const int level_idx,
         return;
     }
 
-    for (int i = 0; i < pre_smooth_; ++i)
+    Level& coarse_lvl = *levels_[level_idx - 1];
+
+    unsigned pre_smooth  = pre_smooth_,
+             post_smooth = post_smooth_;
+
+    if(cycle_type_ == MGCycleType::VariableVCycle)
+    {
+        const unsigned fac = getFinestOperator().NumRows() / lvl.op->NumRows();
+        pre_smooth *= fac;
+        post_smooth *= fac;
+    }
+
+    for (int i = 0; i < pre_smooth; ++i)
         lvl.smoother->Mult(b, x);
 
     lvl.op->MultDEC(x, lvl.res);
     lvl.res -= b;
     // lvl.res.Neg();
 
-    Level& coarse_lvl = *levels_[level_idx - 1];
     // lvl.R->Mult(lvl.res, coarse_lvl.b);
     lvl.T->MultTranspose(lvl.res, coarse_lvl.b);
 
@@ -312,7 +314,7 @@ void StokesMG::cycle(const int level_idx,
     // x += lvl.res;
     x -= lvl.res;
 
-    for (int i = 0; i < post_smooth_; ++i)
+    for (int i = 0; i < post_smooth; ++i)
         lvl.smoother->Mult(b, x);
 }
 

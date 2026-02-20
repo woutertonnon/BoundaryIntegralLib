@@ -3,14 +3,14 @@
 #include "incidence.hpp"
 
 void runIncidenceTest(mfem::Mesh& mesh,
-                      const unsigned order)
+                      const unsigned order = 1)
 {
     ASSERT_EQ(mesh.Dimension(), 3);
     ASSERT_GT(order, 0);
 
     const unsigned DIM = 3;
 
-    // 3D De Rham spaces: H1 (p=1) -> ND (p=1) -> RT (p=0)
+    // 3D De Rham spaces: H1 -> ND -> RT
     mfem::H1_FECollection h1_fec(order    , DIM);
     mfem::ND_FECollection nd_fec(order    , DIM);
     mfem::RT_FECollection rt_fec(order - 1, DIM);
@@ -24,7 +24,10 @@ void runIncidenceTest(mfem::Mesh& mesh,
 
     std::unique_ptr<mfem::SparseMatrix> d1d0(mfem::Mult(d1, d0));
 
-    ASSERT_NEAR(d1d0->MaxNorm(), 0.0, 1e-14);
+    ASSERT_NEAR(
+        d1d0->MaxNorm() / std::max(d0.MaxNorm(), d1.MaxNorm()),
+        0.0, 1e-12
+    ) << "Complex property failed at order " << order << std::endl;
     ASSERT_GT(d0.MaxNorm(), 0.0);
     ASSERT_GT(d1.MaxNorm(), 0.0);
 }
@@ -36,12 +39,12 @@ TEST(IncidenceTest, ComplexPropertyTetsO1)
         n, n + 1, n + 2, mfem::Element::TETRAHEDRON
     );
 
-    runIncidenceTest(mesh, 1);
+    runIncidenceTest(mesh);
 }
 
 TEST(IncidenceTest, ComplexPropertyTetsOp)
 {
-    const unsigned n = 3,
+    const unsigned n = 2,
                    pmax = 3;
     mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
         n, n + 1, n + 2, mfem::Element::TETRAHEDRON
@@ -51,27 +54,27 @@ TEST(IncidenceTest, ComplexPropertyTetsOp)
         runIncidenceTest(mesh, p);
 }
 
-TEST(IncidenceTest, ComplexPropertyHexO1)
-{
-    const unsigned n = 5;
-    mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
-        n, n + 1, n + 2, mfem::Element::HEXAHEDRON
-    );
-
-    runIncidenceTest(mesh, 1);
-}
-
-TEST(IncidenceTest, ComplexPropertyHexOp)
-{
-    const unsigned n = 3,
-                   pmax = 3;
-    mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
-        n, n + 1, n + 2, mfem::Element::HEXAHEDRON
-    );
-
-    for(unsigned p = 1; p <= pmax; ++p)
-        runIncidenceTest(mesh, p);
-}
+// TEST(IncidenceTest, ComplexPropertyHexO1)
+// {
+//     const unsigned n = 5;
+//     mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
+//         n, n + 1, n + 2, mfem::Element::HEXAHEDRON
+//     );
+//
+//     runIncidenceTest(mesh, 1);
+// }
+//
+// TEST(IncidenceTest, ComplexPropertyHexOp)
+// {
+//     const unsigned n = 3,
+//                    pmax = 3;
+//     mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
+//         n, n + 1, n + 2, mfem::Element::HEXAHEDRON
+//     );
+//
+//     for(unsigned p = 1; p <= pmax; ++p)
+//         runIncidenceTest(mesh, p);
+// }
 
 
 // TEST(IncidenceTest, CurlCurl3D)

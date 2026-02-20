@@ -10,14 +10,14 @@
 double computeCReg(mfem::Mesh& mesh);
 double computeCWBound(mfem::Mesh& mesh,
                       const unsigned order = 1,
-                      const double factor = 0.2);
+                      const double factor = 1);
 
 namespace StokesNitsche
 {
 
 
 enum class RefinementType { Geometric, PRef };
-enum class MGCycleType { VCycle, WCycle };
+enum class MGCycleType { VCycle, WCycle, VariableVCycle };
 
 class StokesMG : public mfem::Solver
 {
@@ -50,8 +50,8 @@ public:
     void setCoarseSolver(std::shared_ptr<const mfem::Solver> solver)
     { coarse_solver_ = std::move(solver); }
 
-    void setSmoothIterations(const int pre, const int post)
-    { pre_smooth_ = pre; post_smooth_ = post; }
+    void setSmoothIterations(const int pre, const int post = -1)
+    { pre_smooth_ = pre; post_smooth_ = (post < 0 ? pre : post); }
 
     void setCycleType(const MGCycleType type) { cycle_type_ = type; }
     void setIterativeMode(const bool mode) { iterative_mode = mode; }

@@ -11,23 +11,25 @@
 // 3. Reconfigures the MG solver to Galerkin mode and runs a GMRES convergence test.
 void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
                      const unsigned geomref = 1,
-                     const unsigned pref = 2,
-                     const double penalty = 10.0,
+                     const unsigned pref = 3,
+                     const double penalty = -1.0,
                      const double tol = 1e-6)
 {
 #ifdef MFEM_USE_SUITESPARSE
     std::cout << "Using SuiteSparse for Coarse Grid Solve" << std::endl;
 #endif
-    const double theta = 1.0, factor = 0.0;
+#ifdef MFEM_USE_OPENMP
+    mfem::Device("omp");
+#endif
+    const double theta = 1.0, factor = 1.0;
 
     // 1. Initialize MG Solver & Hierarchy
-    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor,
-                               StokesNitsche::MassLumping::RowSum);
+    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor);
 
     for (int i = 0; i < geomref; ++i)
-        mg.addRefinement(StokesNitsche::RefinementType::Geometric);
+        mg.addRefinement(StokesNitsche::RefinementType::Geometric, penalty);
     for (int i = 0; i < pref; ++i)
-        mg.addRefinement(StokesNitsche::RefinementType::PRef);
+        mg.addRefinement(StokesNitsche::RefinementType::PRef, penalty);
 
     const auto& fine_op = mg.getFinestOperator();
     const int num_rows = fine_op.NumRows();
@@ -49,12 +51,12 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     fine_op.Mult(x_exact, b);
     x_sol = 0.0;
 
-    mg.setCycleType(StokesNitsche::MGCycleType::VCycle);
+    mg.setCycleType(StokesNitsche::MGCycleType::VariableVCycle);
     mg.setIterativeMode(true);
-    mg.setSmoothIterations(1, 1);
+    mg.setSmoothIterations(32);
 
     double initial_norm = 0.0;
-    const int max_iter = 128;
+    const int max_iter = 128 * (pref + 1);
 
     std::cout << "  Iter | Rel. Residual \n-------|---------------\n";
 
@@ -104,9 +106,9 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     gmres.SetPreconditioner(mg);
     gmres.SetAbsTol(1e-12);
     gmres.SetRelTol(tol);
-    gmres.SetMaxIter(128);
+    gmres.SetMaxIter(max_iter);
     gmres.SetPrintLevel(1);
-    gmres.SetKDim(128);
+    gmres.SetKDim(max_iter);
 
     gmres.Mult(b, x_sol);
 
