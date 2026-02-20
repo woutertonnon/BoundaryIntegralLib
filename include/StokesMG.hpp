@@ -7,9 +7,15 @@
 #include <vector>
 #include <memory>
 
+double computeCReg(mfem::Mesh& mesh);
+double computeCWBound(mfem::Mesh& mesh,
+                      const unsigned order);
+
 namespace StokesNitsche
 {
 
+
+enum class RefinementType { Geometric, PRef };
 enum class MGCycleType { VCycle, WCycle };
 
 class StokesMG : public mfem::Solver
@@ -25,10 +31,9 @@ public:
      * setOperatorMode(StokesNitsche::OperatorMode::Galerkin)
      * before passing it as a precontioner. */
     StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
-             const unsigned order,
-             const double theta,
-             const double penalty,
-             const double factor,
+             const double theta = 1,
+             const double penalty = -1,
+             const double factor = 1,
              const MassLumping ml = MassLumping::Diagonal,
              const SmootherType st = SmootherType::GaussSeidelForw);
 
@@ -37,19 +42,15 @@ public:
     StokesMG(const StokesMG&) = delete;
     StokesMG& operator=(const StokesMG&) = delete;
 
-    /** @brief Refines the finest mesh and adds a new MG level. */
-    void addRefinedLevel();
+    /** @brief Refines and adds a new MG level. */
+    void addRefinement(const RefinementType reftype = RefinementType::Geometric,
+                       double penalty = -1);
 
     void setCoarseSolver(std::shared_ptr<const mfem::Solver> solver)
-    {
-        coarse_solver_ = std::move(solver);
-    }
+    { coarse_solver_ = std::move(solver); }
 
     void setSmoothIterations(const int pre, const int post)
-    {
-        pre_smooth_ = pre;
-        post_smooth_ = post;
-    }
+    { pre_smooth_ = pre; post_smooth_ = post; }
 
     void setCycleType(const MGCycleType type) { cycle_type_ = type; }
     void setIterativeMode(const bool mode) { iterative_mode = mode; }
@@ -57,7 +58,7 @@ public:
     /** @brief Set the mode of the input system.
      * If Galerkin: Input 'b' is scaled by M_lumped^{-1} before the MG cycle.
      * If DEC: Input 'b' is used as-is. */
-    void setOperatorMode(const OperatorMode mode) const { mode_ = mode; }
+    void setOperatorMode(const OperatorMode mode) { mode_ = mode; }
 
     void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
     void SetOperator(const mfem::Operator& op) override;
@@ -93,7 +94,7 @@ public:
     MGCycleType getCycleType() const { return cycle_type_; }
     MassLumping getMassLumping() const { return ml_; }
     SmootherType getSmootherType() const { return st_; }
-    int getNumLevels() const { return static_cast<int>(levels_.size()); }
+    unsigned getNumLevels() const { return static_cast<int>(levels_.size()); }
     OperatorMode getOperatorMode() const { return mode_; }
 
 private:
@@ -101,19 +102,16 @@ private:
     {
         const std::shared_ptr<const StokesNitscheOperator> op;
         const std::shared_ptr<const StokesNitscheDGS> smoother;
-        const std::unique_ptr<const mfem::Operator> P;
-        const std::unique_ptr<const mfem::Operator> R;
+        const std::unique_ptr<const mfem::Operator> T;
 
         mutable mfem::Vector x, b, res;
 
         Level(std::shared_ptr<const StokesNitscheOperator> o,
               std::shared_ptr<const StokesNitscheDGS> s,
-              std::unique_ptr<const mfem::Operator> p,
-              std::unique_ptr<const mfem::Operator> r)
+              std::unique_ptr<const mfem::Operator> t)
             : op(std::move(o)),
               smoother(std::move(s)),
-              P(std::move(p)),
-              R(std::move(r)),
+              T(std::move(t)),
               x(op->NumRows()),
               b(op->NumRows()),
               res(op->NumRows())
@@ -130,10 +128,10 @@ private:
     mutable mfem::Vector coarse_x_ext_;
 #endif
 
-    const double theta_, penalty_, factor_;
-    const unsigned order_;
+    const double theta_, penalty_, factor_, penalty_bound_coarse_;
     const MassLumping ml_;
     const SmootherType st_;
+    unsigned order_ = 1;
 
     int pre_smooth_ = 1;
     int post_smooth_ = 1;
@@ -148,8 +146,7 @@ private:
 
     void buildTransfers(const StokesNitscheOperator& coarse,
                         const StokesNitscheOperator& fine,
-                        std::unique_ptr<const mfem::Operator>& P,
-                        std::unique_ptr<const mfem::Operator>& R) const;
+                        std::unique_ptr<const mfem::Operator>& T) const;
 };
 
 } // namespace StokesNitsche

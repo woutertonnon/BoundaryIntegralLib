@@ -1,21 +1,72 @@
 #include "StokesMG.hpp"
 #include <iomanip>
 
+double computeCReg(mfem::Mesh& mesh)
+{
+    const int ne = mesh.GetNE();
+    double max_creg = 0.0;
+
+    // Helper lambda to precisely integrate the area of a face
+    auto ComputeFaceArea = [](mfem::ElementTransformation* Tr) -> double
+    {
+        if (!Tr) return 0.0;
+
+        int order = std::max(1, 2 * Tr->OrderW());
+        const mfem::IntegrationRule& ir = mfem::IntRules.Get(Tr->GetGeometryType(), order);
+
+        double area = 0.0;
+        for (int p = 0; p < ir.GetNPoints(); p++)
+        {
+            const mfem::IntegrationPoint& ip = ir.IntPoint(p);
+            Tr->SetIntPoint(&ip);
+            area += Tr->Weight() * ip.weight;
+        }
+        return area;
+    };
+
+    mfem::Array<int> faces, ori;
+
+    for (int i = 0; i < ne; ++i)
+    {
+        double volume = mesh.GetElementVolume(i);
+        double h_K = mesh.GetElementSize(i);
+        double surface_area = 0.0;
+
+        // Fetch the faces of the current 3D element
+        mesh.GetElementFaces(i, faces, ori);
+        for (int f = 0; f < faces.Size(); ++f)
+        {
+            mfem::ElementTransformation* Tf = mesh.GetFaceTransformation(faces[f]);
+            surface_area += ComputeFaceArea(Tf);
+        }
+
+        double current_creg = (surface_area / volume) * h_K;
+        max_creg = std::max(max_creg, current_creg);
+    }
+
+    return max_creg;
+}
+
+double computeCWBound(mfem::Mesh& mesh,
+                      const unsigned order = 1)
+{
+    return 4. * order * (order + 2) * computeCReg(mesh) / 3.;
+}
+
 namespace StokesNitsche
 {
 
 StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
-                   const unsigned order,
                    const double theta,
                    const double penalty,
                    const double factor,
                    const MassLumping ml,
                    const SmootherType st)
     : mfem::Solver(0, 0),
-      order_(order),
       theta_(theta),
-      penalty_(penalty),
       factor_(factor),
+      penalty_bound_coarse_(computeCReg(*coarse_mesh)),
+      penalty_(penalty < 0 ? computeCReg(*coarse_mesh) : penalty),
       ml_(ml),
       st_(st)
 {
@@ -32,7 +83,7 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
 
     levels_.push_back(
         std::make_unique<Level>(
-            std::move(op), std::move(smoother), nullptr, nullptr
+            std::move(op), std::move(smoother), nullptr
         )
     );
 
@@ -57,89 +108,126 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
 #endif
 }
 
-void StokesMG::addRefinedLevel()
+void StokesMG::addRefinement(const RefinementType reftype,
+                             double penalty)
 {
     const Level& coarse_lvl = *levels_.back();
 
-    auto fine_mesh = std::make_shared<mfem::Mesh>(coarse_lvl.op->getMesh());
-    fine_mesh->UniformRefinement();
+    // TODO: Maybe const_cast the mesh in StokesMG::addRefinement
+    //       then we can avoid copying the mesh, but
+    //       does that lead to UB?
 
-    auto fine_op = std::make_shared<StokesNitscheOperator>(
-        fine_mesh, order_, theta_, penalty_, factor_, ml_
-    );
+    auto fine_mesh = std::make_shared<mfem::Mesh>(coarse_lvl.op->getMesh());
+
+    std::shared_ptr<StokesNitscheOperator> fine_op;
+
+    if(reftype == RefinementType::Geometric)
+    {
+        MFEM_VERIFY(order_ == 1,
+                    "StokesMG::addRefinement: Doing geometric refinement after p-refinement!");
+        fine_mesh->UniformRefinement();
+        // Add lowest order
+        fine_op = std::make_shared<StokesNitscheOperator>(
+            fine_mesh, order_, theta_,
+            penalty < 0 ? penalty_ : penalty,
+            factor_, ml_
+        );
+    }
+    else // reftype == RefinementType::PRef
+    {
+        ++order_;
+
+        if(penalty < 0)
+            penalty = (penalty_ / penalty_bound_coarse_) * computeCWBound(*fine_mesh, order_);
+
+        fine_op = std::make_shared<StokesNitscheOperator>(
+            fine_mesh, order_, theta_, penalty, factor_, ml_
+        );
+    }
     // fine_op->setDECMode();
     auto fine_smoother = std::make_shared<StokesNitscheDGS>(fine_op, st_);
 
-    std::unique_ptr<const mfem::Operator> P;
-    std::unique_ptr<const mfem::Operator> R;
-    buildTransfers(*coarse_lvl.op, *fine_op, P, R);
+    std::unique_ptr<const mfem::Operator> T;
+    buildTransfers(*coarse_lvl.op, *fine_op, T);
 
     height = fine_op->NumRows();
     width = fine_op->NumCols();
 
     levels_.push_back(std::make_unique<Level>(std::move(fine_op),
                                               std::move(fine_smoother),
-                                              std::move(P),
-                                              std::move(R)));
+                                              std::move(T)));
 }
+
+// Helper Struct for transfer operators
+// No need to expose in the header, so implemented here
+struct TransferOperator : public mfem::Operator
+{
+    const std::unique_ptr<const mfem::Operator> P;
+    const mfem::Vector& Mc, Mf;
+    mutable mfem::Vector tmp;
+
+    // TAKES OWNERSHIP OF P
+    TransferOperator(mfem::Operator* prol,
+                     const mfem::Vector& Mcoarse,
+                     const mfem::Vector& Mfine
+    ): mfem::Operator(Mfine.Size(), Mcoarse.Size()),
+       P(prol), Mc(Mcoarse), Mf(Mfine), tmp(Mcoarse.Size()) {}
+
+    virtual void Mult(const mfem::Vector& x,
+                            mfem::Vector& y) const override
+    {
+        P->Mult(x, y);
+    }
+
+    virtual void MultTranspose(const mfem::Vector& x,
+                                     mfem::Vector& y) const override
+    {
+        tmp = x;
+        tmp *= Mf;
+
+        P->MultTranspose(tmp, y);
+
+        y /= Mc;
+    }
+};
 
 void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
                               const StokesNitscheOperator& fine,
-                              std::unique_ptr<const mfem::Operator>& P,
-                              std::unique_ptr<const mfem::Operator>& R) const
+                              std::unique_ptr<const mfem::Operator>& T) const
 {
-    auto P_block = std::make_unique<mfem::BlockOperator>(
+    auto T_block = std::make_unique<mfem::BlockOperator>(
         fine.getOffsets(), coarse.getOffsets()
     );
-    auto R_block = std::make_unique<mfem::BlockOperator>(
-        coarse.getOffsets(), fine.getOffsets()
-    );
-
-    auto CreateL2Dual = [](const mfem::SparseMatrix& P_mat,
-                           const mfem::Vector& M_f,
-                           const mfem::Vector& M_c) -> mfem::SparseMatrix*
-    {
-        mfem::SparseMatrix* R_mat = mfem::Transpose(P_mat);
-        mfem::Vector Mc_inv(M_c);
-        Mc_inv.Reciprocal();
-        R_mat->ScaleRows(Mc_inv);
-        R_mat->ScaleColumns(M_f);
-        return R_mat;
-    };
 
     {
-        mfem::OperatorPtr P_u(mfem::Operator::MFEM_SPARSEMAT);
-        fine.getHCurlSpace().GetTransferOperator(coarse.getHCurlSpace(), P_u);
-        P_u.SetOperatorOwner(false);
+        mfem::OperatorPtr T_u;
+        fine.getHCurlSpace().GetTransferOperator(coarse.getHCurlSpace(), T_u);
+        T_u.SetOperatorOwner(false);
 
-        // We set the type to mfem::Operator::MFEM_SPARSEMAT, so
-        // we can safely upcast
-        auto* P_u_mat = dynamic_cast<mfem::SparseMatrix*>(P_u.Ptr());
-        mfem::SparseMatrix* R_u_mat = CreateL2Dual(*P_u_mat,
-                                                   fine.getMassHCurlLumped(),
-                                                   coarse.getMassHCurlLumped());
-        P_block->SetBlock(0, 0, P_u_mat);
-        R_block->SetBlock(0, 0, R_u_mat);
+        auto T_u_op =
+            new TransferOperator(
+                T_u.Ptr(), coarse.getMassHCurlLumped(), fine.getMassHCurlLumped()
+            );
+        T_block->SetBlock(0, 0, T_u_op);
     }
 
     {
-        mfem::OperatorPtr P_p(mfem::Operator::MFEM_SPARSEMAT);
-        fine.getH1Space().GetTransferOperator(coarse.getH1Space(), P_p);
-        P_p.SetOperatorOwner(false);
+        mfem::OperatorPtr T_p;
+        fine.getH1Space().GetTransferOperator(coarse.getH1Space(), T_p);
+        T_p.SetOperatorOwner(false);
 
-        auto* P_p_mat = dynamic_cast<mfem::SparseMatrix*>(P_p.Ptr());
-        mfem::SparseMatrix* R_p_mat = CreateL2Dual(*P_p_mat,
-                                                   fine.getMassH1Lumped(),
-                                                   coarse.getMassH1Lumped());
-        P_block->SetBlock(1, 1, P_p_mat);
-        R_block->SetBlock(1, 1, R_p_mat);
+        auto T_p_op =
+            new TransferOperator(
+                T_p.Ptr(), coarse.getMassH1Lumped(), fine.getMassH1Lumped()
+            );
+        T_block->SetBlock(1, 1, T_p_op);
     }
 
-    P_block->owns_blocks = 1;
-    R_block->owns_blocks = 1;
-    P = std::move(P_block);
-    R = std::move(R_block);
+    T_block->owns_blocks = 1;
+    T = std::move(T_block);
 }
+
+//
 
 void StokesMG::cycle(const int level_idx,
                      const mfem::Vector& b,
@@ -186,7 +274,8 @@ void StokesMG::cycle(const int level_idx,
     // lvl.res.Neg();
 
     Level& coarse_lvl = *levels_[level_idx - 1];
-    lvl.R->Mult(lvl.res, coarse_lvl.b);
+    // lvl.R->Mult(lvl.res, coarse_lvl.b);
+    lvl.T->MultTranspose(lvl.res, coarse_lvl.b);
 
     coarse_lvl.x = 0.0;
     cycle(level_idx - 1, coarse_lvl.b, coarse_lvl.x);
@@ -194,7 +283,8 @@ void StokesMG::cycle(const int level_idx,
     if (cycle_type_ == MGCycleType::WCycle)
         cycle(level_idx - 1, coarse_lvl.b, coarse_lvl.x);
 
-    lvl.P->Mult(coarse_lvl.x, lvl.res);
+    // lvl.P->Mult(coarse_lvl.x, lvl.res);
+    lvl.T->Mult(coarse_lvl.x, lvl.res);
     // x += lvl.res;
     x -= lvl.res;
 

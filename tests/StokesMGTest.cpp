@@ -18,14 +18,13 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 #ifdef MFEM_USE_SUITESPARSE
     std::cout << "Using SuiteSparse for Coarse Grid Solve" << std::endl;
 #endif
-
     const double theta = 1.0, factor = 1.0;
 
     // 1. Initialize MG Solver & Hierarchy
-    StokesNitsche::StokesMG mg(mesh_ptr, p, theta, penalty, factor);
+    StokesNitsche::StokesMG mg(mesh_ptr);//, theta, penalty, factor);
 
     for (int i = 0; i < refinements; ++i)
-        mg.addRefinedLevel();
+        mg.addRefinement(StokesNitsche::RefinementType::PRef);
 
     const auto& fine_op = mg.getFinestOperator();
     const int num_rows = fine_op.NumRows();
@@ -126,13 +125,13 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 TEST(StokesMGTest, ConvergenceTetra)
 {
     const unsigned int n = 1;
-    for(unsigned p = 1; p <= 3; ++p)
+    for(unsigned p = 1; p <= 1; ++p)
     {
         std::cout << "Order " << p << std::endl;
         auto mesh_ptr = std::make_shared<mfem::Mesh>(
             mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
         );
-        RunStokesMGTest(mesh_ptr, p, p > 1 ? 3 : 4, 10 * p * p);
+        RunStokesMGTest(mesh_ptr, 1, 2, 10);
     }
 }
 
