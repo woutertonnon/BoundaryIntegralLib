@@ -9,7 +9,8 @@
 
 double computeCReg(mfem::Mesh& mesh);
 double computeCWBound(mfem::Mesh& mesh,
-                      const unsigned order);
+                      const unsigned order = 1,
+                      const double factor = 0.2);
 
 namespace StokesNitsche
 {
@@ -100,14 +101,16 @@ public:
 private:
     struct Level
     {
-        const std::shared_ptr<const StokesNitscheOperator> op;
-        const std::shared_ptr<const StokesNitscheDGS> smoother;
+        // NOTE: We cannot put const here, because mfem
+        //       requires some non-constness somewhere for some reason
+        const std::shared_ptr<StokesNitscheOperator> op;
+        const std::shared_ptr<StokesNitscheDGS> smoother;
         const std::unique_ptr<const mfem::Operator> T;
 
         mutable mfem::Vector x, b, res;
 
-        Level(std::shared_ptr<const StokesNitscheOperator> o,
-              std::shared_ptr<const StokesNitscheDGS> s,
+        Level(std::shared_ptr<StokesNitscheOperator> o,
+              std::shared_ptr<StokesNitscheDGS> s,
               std::unique_ptr<const mfem::Operator> t)
             : op(std::move(o)),
               smoother(std::move(s)),
@@ -146,7 +149,8 @@ private:
 
     void buildTransfers(const StokesNitscheOperator& coarse,
                         const StokesNitscheOperator& fine,
-                        std::unique_ptr<const mfem::Operator>& T) const;
+                        std::unique_ptr<const mfem::Operator>& T,
+                        const RefinementType reftype) const;
 };
 
 } // namespace StokesNitsche

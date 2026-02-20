@@ -99,8 +99,30 @@ void StokesNitscheOperator::initLumpedMass()
             break;
         case MassLumping::Barycentric:
             throw std::logic_error(
-                "BARYCENTRIC mass lumping not implemented (yet)"
+                "Barycentric mass lumping not implemented (yet)"
             );
+            break;
+        case MassLumping::RowSum:
+        {
+            auto sum_rows = [&](const mfem::SparseMatrix& A,
+                                mfem::Vector& abs_row_sums)
+            {
+                for (int i = 0; i < A.Height(); ++i)
+                {
+                    const int      nnz = A.RowSize(i);
+                    const double* vals = A.GetRowEntries(i);
+                    double s = 0.0;
+                    for (int k = 0; k < nnz; ++k)
+                        s += std::abs(vals[k]);
+                    abs_row_sums[i] = s;
+                }
+            };
+
+            sum_rows(mass_h1_->SpMat(), mass_h1_lumped_);
+            sum_rows(mass_hcurl_->SpMat(), mass_hcurl_lumped_);
+            sum_rows(mass_hdiv_or_l2_->SpMat(), mass_hdiv_or_l2_lumped_);
+            break;
+        }
         default:
             std::unreachable();
     }

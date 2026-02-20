@@ -6,7 +6,7 @@
 
 namespace StokesNitsche {
 
-enum class MassLumping { None, Diagonal, Barycentric };
+enum class MassLumping { None, Diagonal, Barycentric, RowSum };
 enum class OperatorMode { Galerkin, DEC };
 
 // This class implements a Stokes operator using Nitsche's method for weak boundary imposition,
@@ -54,6 +54,11 @@ public:
     const mfem::Vector& getMassHDivOrL2Lumped() const { return mass_hdiv_or_l2_lumped_; }
 
     const mfem::Mesh& getMesh() const { return *mesh_; }
+    mfem::Mesh& getMesh() { return *mesh_; }
+
+    std::shared_ptr<mfem::Mesh> getMeshPtr() { return mesh_; }
+    const std::shared_ptr<const mfem::Mesh> getMeshPtr() const { return mesh_; }
+
     const mfem::Array<int>& getOffsets() const { return offsets_; }
     unsigned getOrder() const { return order_; }
 

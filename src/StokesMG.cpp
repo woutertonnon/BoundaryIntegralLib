@@ -48,9 +48,13 @@ double computeCReg(mfem::Mesh& mesh)
 }
 
 double computeCWBound(mfem::Mesh& mesh,
-                      const unsigned order = 1)
+                      const unsigned order,
+                      const double factor)
 {
-    return 4. * order * (order + 2) * computeCReg(mesh) / 3.;
+    const double res = factor * 4. * order * (order + 2) * computeCReg(mesh) / 3.;
+    std::cout << "CReg: " << computeCReg(mesh) << std::endl;
+    std::cout << "CW: " << res << std::endl;
+    return res;
 }
 
 namespace StokesNitsche
@@ -111,20 +115,17 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
 void StokesMG::addRefinement(const RefinementType reftype,
                              double penalty)
 {
-    const Level& coarse_lvl = *levels_.back();
+    Level& coarse_lvl = *levels_.back();
 
-    // TODO: Maybe const_cast the mesh in StokesMG::addRefinement
-    //       then we can avoid copying the mesh, but
-    //       does that lead to UB?
-
-    auto fine_mesh = std::make_shared<mfem::Mesh>(coarse_lvl.op->getMesh());
-
+    std::shared_ptr<mfem::Mesh> fine_mesh;
     std::shared_ptr<StokesNitscheOperator> fine_op;
 
     if(reftype == RefinementType::Geometric)
     {
         MFEM_VERIFY(order_ == 1,
                     "StokesMG::addRefinement: Doing geometric refinement after p-refinement!");
+        // Copy mesh and refine
+        fine_mesh = std::make_shared<mfem::Mesh>(coarse_lvl.op->getMesh());
         fine_mesh->UniformRefinement();
         // Add lowest order
         fine_op = std::make_shared<StokesNitscheOperator>(
@@ -136,6 +137,8 @@ void StokesMG::addRefinement(const RefinementType reftype,
     else // reftype == RefinementType::PRef
     {
         ++order_;
+        // fine_mesh == coarse_mesh, only p is different
+        fine_mesh = coarse_lvl.op->getMeshPtr();
 
         if(penalty < 0)
             penalty = (penalty_ / penalty_bound_coarse_) * computeCWBound(*fine_mesh, order_);
@@ -148,7 +151,7 @@ void StokesMG::addRefinement(const RefinementType reftype,
     auto fine_smoother = std::make_shared<StokesNitscheDGS>(fine_op, st_);
 
     std::unique_ptr<const mfem::Operator> T;
-    buildTransfers(*coarse_lvl.op, *fine_op, T);
+    buildTransfers(*coarse_lvl.op, *fine_op, T, reftype);
 
     height = fine_op->NumRows();
     width = fine_op->NumCols();
@@ -193,33 +196,54 @@ struct TransferOperator : public mfem::Operator
 
 void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
                               const StokesNitscheOperator& fine,
-                              std::unique_ptr<const mfem::Operator>& T) const
+                              std::unique_ptr<const mfem::Operator>& T,
+                              const RefinementType reftype) const
 {
     auto T_block = std::make_unique<mfem::BlockOperator>(
         fine.getOffsets(), coarse.getOffsets()
     );
 
     {
-        mfem::OperatorPtr T_u;
-        fine.getHCurlSpace().GetTransferOperator(coarse.getHCurlSpace(), T_u);
-        T_u.SetOperatorOwner(false);
+        mfem::Operator* T_u_op;
 
-        auto T_u_op =
-            new TransferOperator(
+        if(reftype == RefinementType::Geometric)
+        {
+            mfem::OperatorPtr T_u;
+            fine.getHCurlSpace().GetTransferOperator(coarse.getHCurlSpace(), T_u);
+            T_u.SetOperatorOwner(false);
+
+            T_u_op = new TransferOperator(
                 T_u.Ptr(), coarse.getMassHCurlLumped(), fine.getMassHCurlLumped()
             );
+        }
+        else // p-refinement
+        {
+            T_u_op = new mfem::PRefinementTransferOperator(
+                coarse.getHCurlSpace(), fine.getHCurlSpace()
+            );
+        }
         T_block->SetBlock(0, 0, T_u_op);
     }
 
     {
-        mfem::OperatorPtr T_p;
-        fine.getH1Space().GetTransferOperator(coarse.getH1Space(), T_p);
-        T_p.SetOperatorOwner(false);
+        mfem::Operator* T_p_op;
 
-        auto T_p_op =
-            new TransferOperator(
+        if(reftype == RefinementType::Geometric)
+        {
+            mfem::OperatorPtr T_p;
+            fine.getH1Space().GetTransferOperator(coarse.getH1Space(), T_p);
+            T_p.SetOperatorOwner(false);
+
+            T_p_op = new TransferOperator(
                 T_p.Ptr(), coarse.getMassH1Lumped(), fine.getMassH1Lumped()
             );
+        }
+        else
+        {
+            T_p_op = new mfem::PRefinementTransferOperator(
+                coarse.getH1Space(), fine.getH1Space()
+            );
+        }
         T_block->SetBlock(1, 1, T_p_op);
     }
 

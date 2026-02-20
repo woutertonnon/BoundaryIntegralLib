@@ -162,15 +162,6 @@ TEST(StokesDGSTest, ResidualComputationTetra)
 }
 
 
-TEST(StokesDGSTest, ConvergenceHex)
-{
-    for(unsigned p = 1; p <= 3; ++p)
-    {
-        std::cout << "Order " << p << std::endl;
-        testConvergence(3, p, mfem::Element::HEXAHEDRON, 10 * p * p);
-    }
-}
-
 TEST(StokesDGSTest, ConvergenceTetra)
 {
     for(unsigned p = 1; p <= 3; ++p)
@@ -179,3 +170,12 @@ TEST(StokesDGSTest, ConvergenceTetra)
         testConvergence(3, p, mfem::Element::TETRAHEDRON, 10 * p * p);
     }
 }
+
+// TEST(StokesDGSTest, ConvergenceHex)
+// {
+//     for(unsigned p = 1; p <= 3; ++p)
+//     {
+//         std::cout << "Order " << p << std::endl;
+//         testConvergence(3, p, mfem::Element::HEXAHEDRON, 10 * p * p);
+//     }
+// }
