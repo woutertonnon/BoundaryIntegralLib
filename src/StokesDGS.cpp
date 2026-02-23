@@ -107,16 +107,6 @@ void StokesNitscheDGS::computeCorrection(const SmootherType st) const
             Lp_s.Mult(r_p, corr_p);
             break;
         }
-        case SmootherType::Jacobi: // NOTE: BAD
-            Lu_->DiagScale(r_u, corr_u);
-            grad_adj_->AddMult(corr_u, r_p, -1.0);
-            Lp_->DiagScale(r_p, corr_p);
-            break;
-        // case SmootherType::GaussSeidelBack:
-        //     Lp_->Gauss_Seidel_back(r_p, corr_p);
-        //     bd_->AddMult(corr_p, r_u, -1.0);
-        //     Lu_->Gauss_Seidel_back(r_u, corr_u);
-        //     break;
         default:
             MFEM_ABORT("StokesNitscheDGS::computeCorrection: unknown smoother");
             break;

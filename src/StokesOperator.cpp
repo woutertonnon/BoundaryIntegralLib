@@ -107,6 +107,7 @@ void StokesNitscheOperator::initLumpedMass()
             auto sum_rows = [&](const mfem::SparseMatrix& A,
                                 mfem::Vector& abs_row_sums)
             {
+                abs_row_sums = 0.0;
                 for (int i = 0; i < A.Height(); ++i)
                 {
                     const int      nnz = A.RowSize(i);
@@ -232,7 +233,7 @@ StokesNitscheOperator::getFullGalerkinSystem() const
 
     auto meanT = std::unique_ptr<mfem::SparseMatrix>(mfem::Transpose(mean));
 
-    // 5. Assemble Block Matrix
+    // Assemble Block Matrix
     block.SetBlock(0, 0, curlcurl.get());
     block.SetBlock(0, 1, grad.get());
     block.SetBlock(1, 0, gradT.get());
@@ -317,37 +318,41 @@ void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
 {
     MFEM_ASSERT(x.Size() == this->NumCols(), "Vector size mismatch");
 
-    const int nv = h1_space_->GetNDofs();
     const int ne = hcurl_space_->GetNDofs();
+    const int nv = h1_space_->GetNDofs();
 
-    std::cerr << "eliminateConstants needs to be fixed" << std::endl;
-    std::abort();
-    mfem::Vector ones(nv);
-    ones = 1.0;
-
+    // x_p wraps the pressure portion of x. Modifying x_p modifies x directly.
     mfem::Vector x_p(x.GetData() + ne, nv);
 
-    double proj = 0.0;
+    // Represent the constant function f(x) = 1 in the FE space.
+    mfem::GridFunction ones(h1_space_.get());
+    mfem::ConstantCoefficient one_coeff(1.0);
+    ones.ProjectCoefficient(one_coeff);
+
+    // Vector to hold the result of the mass matrix applied to 'ones'
+    mfem::Vector M_ones(nv);
 
     if (opmode_ == OperatorMode::Galerkin)
     {
-        const double denom = mass_h1_->InnerProduct(ones, ones);
-        proj = mass_h1_->InnerProduct(ones, x_p) / denom;
+        // M_ones = M * ones
+        mass_h1_->Mult(ones, M_ones);
     }
     else // DEC
     {
         MFEM_ASSERT(ml_ != MassLumping::None,
-            "EliminateConstants: Need mass lumping in DEC mode");
+                    "EliminateConstants: Need mass lumping in DEC mode");
 
-        mfem::Vector tmp(x_p);
-        tmp *= mass_h1_lumped_;
-
-        const double denom = mass_h1_lumped_ * ones;
-        proj = (tmp * ones) / denom;
+        M_ones = ones;
+        M_ones *= mass_h1_lumped_;
     }
 
-    ones *= proj;
-    x_p -= ones;
+    // Compute orthogonal projection
+    const double denom = M_ones * ones;
+    const double num   = M_ones * x_p;
+    const double proj  = num / denom;
+
+    // Subtract the constant mode from the pressure solution in-place
+    x_p.Add(-proj, ones);
 }
 
 // -------------------------------------------------------------------------

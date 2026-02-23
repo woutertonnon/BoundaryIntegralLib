@@ -10,8 +10,8 @@
 // 2. Runs a standalone V-Cycle convergence test.
 // 3. Reconfigures the MG solver to Galerkin mode and runs a GMRES convergence test.
 void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
-                     const unsigned geomref = 1,
-                     const unsigned pref = 3,
+                     const unsigned geomref = 3,
+                     const unsigned pref = 0,
                      const double penalty = -1.0,
                      const double tol = 1e-6)
 {
@@ -24,7 +24,9 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     const double theta = 1.0, factor = 1.0;
 
     // 1. Initialize MG Solver & Hierarchy
-    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor);
+    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor,
+                               StokesNitsche::MassLumping::Diagonal,
+                               StokesNitsche::SmootherType::GaussSeidelSym);
 
     for (int i = 0; i < geomref; ++i)
         mg.addRefinement(StokesNitsche::RefinementType::Geometric, penalty);
@@ -47,21 +49,21 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     mg.setOperatorMode(StokesNitsche::OperatorMode::DEC);
     std::cout << "\n[Phase 1] Running Standalone V-Cycle Test..." << std::endl;
 
-    // Setup System for V-Cycle
     fine_op.Mult(x_exact, b);
     x_sol = 0.0;
 
-    mg.setCycleType(StokesNitsche::MGCycleType::VariableVCycle);
+    mg.setCycleType(StokesNitsche::MGCycleType::VCycle);
     mg.setIterativeMode(true);
-    mg.setSmoothIterations(32);
+    mg.setSmoothIterations(1);
 
     double initial_norm = 0.0;
-    const int max_iter = 128 * (pref + 1);
+    const int max_iter = 128;// * (pref + 1);
 
     std::cout << "  Iter | Rel. Residual \n-------|---------------\n";
 
     for (int iter = 0; iter < max_iter; ++iter)
     {
+        fine_op.eliminateConstants(x_sol);
         residual = b;
         fine_op.AddMult(x_sol, residual, -1.0);
         const double current_norm = residual.Norml2();

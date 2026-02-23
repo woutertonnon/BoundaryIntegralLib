@@ -15,7 +15,6 @@ double computeCWBound(mfem::Mesh& mesh,
 namespace StokesNitsche
 {
 
-
 enum class RefinementType { Geometric, PRef };
 enum class MGCycleType { VCycle, WCycle, VariableVCycle };
 
