@@ -10,9 +10,7 @@
 // 2. Runs a standalone V-Cycle convergence test.
 // 3. Reconfigures the MG solver to Galerkin mode and runs a GMRES convergence test.
 void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
-                     const unsigned geomref = 3,
-                     const unsigned pref = 0,
-                     const double penalty = -1.0,
+                     const unsigned geomref = 1,
                      const double tol = 1e-6)
 {
 #ifdef MFEM_USE_SUITESPARSE
@@ -21,17 +19,11 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 #ifdef MFEM_USE_OPENMP
     mfem::Device("omp");
 #endif
-    const double theta = 1.0, factor = 1.0;
-
     // 1. Initialize MG Solver & Hierarchy
-    StokesNitsche::StokesMG mg(mesh_ptr, theta, penalty, factor,
-                               StokesNitsche::MassLumping::Diagonal,
-                               StokesNitsche::SmootherType::GaussSeidelSym);
+    StokesNitsche::StokesMG mg(mesh_ptr);
 
     for (int i = 0; i < geomref; ++i)
-        mg.addRefinement(StokesNitsche::RefinementType::Geometric, penalty);
-    for (int i = 0; i < pref; ++i)
-        mg.addRefinement(StokesNitsche::RefinementType::PRef, penalty);
+        mg.addRefinement();
 
     const auto& fine_op = mg.getFinestOperator();
     const int num_rows = fine_op.NumRows();
@@ -132,14 +124,10 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 TEST(StokesMGTest, ConvergenceTetra)
 {
     const unsigned int n = 1;
-    for(unsigned p = 1; p <= 1; ++p)
-    {
-        std::cout << "Order " << p << std::endl;
-        auto mesh_ptr = std::make_shared<mfem::Mesh>(
-            mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
-        );
-        RunStokesMGTest(mesh_ptr);
-    }
+    auto mesh_ptr = std::make_shared<mfem::Mesh>(
+        mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
+    );
+    RunStokesMGTest(mesh_ptr, 4);
 }
 
 

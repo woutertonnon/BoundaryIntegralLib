@@ -69,52 +69,100 @@ void StokesNitscheDGS::initTransformedSystem()
     );
 }
 
+void StokesNitscheDGS::initSmoothers()
+{
+    if (st_ == SmootherType::Custom) return;
+
+    if (st_ == SmootherType::GaussSeidelForw || st_ == SmootherType::GaussSeidelSym)
+    {
+        int gs_type = (st_ == SmootherType::GaussSeidelSym) ? 0 : 1;
+        smoother_u_ = std::make_unique<mfem::GSSmoother>(*Lu_, gs_type);
+        smoother_p_ = std::make_unique<mfem::GSSmoother>(*Lp_, gs_type);
+    }
+    else if (st_ == SmootherType::Jacobi)
+    {
+        smoother_u_ = std::make_unique<mfem::DSmoother>(*Lu_);
+        smoother_p_ = std::make_unique<mfem::DSmoother>(*Lp_);
+    }
+    // Inefficient, but for testing, we can try Chebyshev
+    else if (st_ == SmootherType::Chebyshev)
+    {
+        const int poly_order = 2;
+
+        // Chebyshev smoother requires an array of essential true DOFs.
+        // We pass an empty array since Nitsche's method handles boundaries weakly.
+        mfem::Array<int> ess_tdofs;
+
+        // Extract diagonal for Jacobi preconditioning used in Chebyshev
+        mfem::Vector diag_u;
+        Lu_->GetDiag(diag_u);
+
+        // Passing 'power_iterations' (int) makes MFEM internally instantiate
+        // mfem::PowerMethod and estimate the largest eigenvalue of D^{-1} * Lu
+        smoother_u_ = std::make_unique<mfem::OperatorChebyshevSmoother>(
+            *Lu_, diag_u, ess_tdofs, poly_order
+        );
+
+        mfem::Vector diag_p;
+        Lp_->GetDiag(diag_p);
+
+        smoother_p_ = std::make_unique<mfem::OperatorChebyshevSmoother>(
+            *Lp_, diag_p, ess_tdofs, poly_order
+        );
+    }
+    else
+    {
+        MFEM_ABORT("StokesNitscheDGS: unknown smoother type");
+    }
+
+    buildBlockPreconditioner();
+}
+
+void StokesNitscheDGS::buildBlockPreconditioner()
+{
+    block_prec_ = std::make_unique<mfem::BlockLowerTriangularPreconditioner>(op_->getOffsets());
+
+    block_prec_->SetDiagonalBlock(0, smoother_u_.get());
+    block_prec_->SetDiagonalBlock(1, smoother_p_.get());
+    block_prec_->SetBlock(1, 0, grad_adj_.get());
+}
+
+void StokesNitscheDGS::SetSmootherU(std::unique_ptr<mfem::Solver> smoother)
+{
+    smoother_u_ = std::move(smoother);
+    if (smoother_p_) buildBlockPreconditioner();
+}
+
+void StokesNitscheDGS::SetSmootherP(std::unique_ptr<mfem::Solver> smoother)
+{
+    smoother_p_ = std::move(smoother);
+    if (smoother_u_) buildBlockPreconditioner();
+}
+
 void StokesNitscheDGS::computeResidual(const mfem::Vector& x,
                                        const mfem::Vector& y) const
 {
-    op_->MultDEC(y, residual_);
-    residual_ -= x;
+    if (!iterative_mode)
+    {
+        MFEM_ABORT("StokesNitscheDGS::computeResidual in non-iterative mode!");
+    }
+    else
+    {
+        op_->MultDEC(y, residual_);
+        residual_ -= x;
+    }
 }
 
-void StokesNitscheDGS::computeCorrection(const SmootherType st) const
+void StokesNitscheDGS::computeCorrection() const
 {
-    // const mfem::Mesh& mesh = op_->getMesh();
-    const int nv = op_->getH1Space().GetNDofs();
-    const int ne = op_->getHCurlSpace().GetNDofs();
-
-    mfem::Vector r_u(residual_, 0, ne);
-    mfem::Vector r_p(residual_, ne, nv);
-
-    mfem::Vector corr_u(corr_, 0, ne);
-    mfem::Vector corr_p(corr_, ne, nv);
-
     corr_ = 0.0;
-
-    switch (st)
-    {
-        case SmootherType::GaussSeidelForw:
-            Lu_->Gauss_Seidel_forw(r_u, corr_u);
-            grad_adj_->AddMult(corr_u, r_p, -1.0);
-            Lp_->Gauss_Seidel_forw(r_p, corr_p);
-            break;
-        case SmootherType::GaussSeidelSym:
-        {
-            mfem::GSSmoother Lu_s(*Lu_);
-            mfem::GSSmoother Lp_s(*Lp_);
-
-            Lu_s.Mult(r_u, corr_u);
-            grad_adj_->AddMult(corr_u, r_p, -1.0);
-            Lp_s.Mult(r_p, corr_p);
-            break;
-        }
-        default:
-            MFEM_ABORT("StokesNitscheDGS::computeCorrection: unknown smoother");
-            break;
-    }
+    block_prec_->Mult(residual_, corr_);
 }
 
 void StokesNitscheDGS::distributeCorrection(mfem::Vector& y) const
 {
+    if (!iterative_mode)
+        y = 0.0;
     T_->AddMult(corr_, y, -1.0);
 }
 
@@ -132,6 +180,7 @@ StokesNitscheDGS::StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
 
     initTransformation();
     initTransformedSystem();
+    initSmoothers();
 }
 
 double StokesNitscheDGS::computeResidualNorm(const mfem::Vector& x,
@@ -145,7 +194,7 @@ void StokesNitscheDGS::Mult(const mfem::Vector& x,
                                   mfem::Vector& y) const
 {
     computeResidual(x, y);
-    computeCorrection(st_);
+    computeCorrection();
     distributeCorrection(y);
 }
 

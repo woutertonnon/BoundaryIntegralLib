@@ -41,7 +41,9 @@ enable_testing()
 # endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(MFEM_USE_OPENMP YES)
+    set(MFEM_USE_OPENMP YES CACHE BOOL "Enable OpenMP in MFEM" FORCE)
+else()
+    set(MFEM_USE_OPENMP NO CACHE BOOL "Disable OpenMP in MFEM" FORCE)
 endif()
 
 # Note: We do NOT need add_subdirectory(extern/spectra) because it's header-only

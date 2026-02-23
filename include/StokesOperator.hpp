@@ -21,7 +21,7 @@ public:
                           const double theta,
                           const double penalty,
                           const double factor,
-                          const MassLumping ml = MassLumping::Diagonal);
+                          const MassLumping ml = MassLumping::RowSum);
 
     StokesNitscheOperator(const StokesNitscheOperator&) = delete;
     StokesNitscheOperator& operator=(const StokesNitscheOperator&) = delete;

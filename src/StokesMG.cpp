@@ -69,12 +69,12 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
     : mfem::Solver(0, 0),
       theta_(theta),
       factor_(factor),
-      penalty_bound_coarse_(computeCReg(*coarse_mesh)),
-      penalty_(penalty < 0 ? computeCReg(*coarse_mesh) : penalty),
+      penalty_bound_coarse_(computeCWBound(*coarse_mesh)),
+      penalty_(penalty < 0 ? computeCWBound(*coarse_mesh) : penalty),
       ml_(ml),
       st_(st)
 {
-    iterative_mode = true;
+    iterative_mode = false;
 
     auto op = std::make_shared<StokesNitscheOperator>(
         coarse_mesh, order_, theta_, penalty_, factor_, ml_
