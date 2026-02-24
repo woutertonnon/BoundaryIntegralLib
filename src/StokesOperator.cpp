@@ -67,7 +67,7 @@ void StokesNitscheOperator::initMass()
     // NOTE: Maybe with libCEED? For whatever reason,
     //       mfem cannot deal even with mass matrices in any assembly
     //       mode other than full in 3D ...
-    const bool use_pa = false; //(ml_ != MassLumping::RowSum);
+    const bool use_pa = (ml_ != MassLumping::RowSum);
 
     if (use_pa)
     {
@@ -89,7 +89,7 @@ void StokesNitscheOperator::initMass()
     mass_hdiv_or_l2_->Assemble();
 
     // Only Finalize (which builds the CSR structure) if we are not using PA
-    if (!use_pa)
+    //if (!use_pa)
     {
         mass_h1_->Finalize();
         mass_hcurl_->Finalize();

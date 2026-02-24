@@ -98,7 +98,11 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
     constexpr double PENALTY = 10.0;
     constexpr double FACTOR  = 1.0;
 
-    StokesNitsche::StokesMG mg_solver(mesh_ptr, THETA, PENALTY, FACTOR);
+    StokesNitsche::StokesMG mg_solver(mesh_ptr, 
+            THETA, PENALTY, FACTOR,
+            StokesNitsche::MassLumping::Diagonal,
+            StokesNitsche::SmootherType::Chebyshev
+    );
     mg_solver.setOperatorMode(StokesNitsche::OperatorMode::Galerkin);
     mg_solver.setIterativeMode(false);
     mg_solver.setCycleType(StokesNitsche::MGCycleType::VCycle);
@@ -143,7 +147,7 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
             mg_solver.removeRefinement();
             mg_solver.addRefinement();
         }
-        mg_solver.addRefinement(2);
+        mg_solver.addRefinement(1);
 
 
         StokesNitsche::StokesNitscheOperator& op =
@@ -257,11 +261,11 @@ int main(int argc, char *argv[])
 #endif
     const unsigned int n = 1;
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-        mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
+        mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::HEXAHEDRON)
     );
 
     const bool save_results = false;
-    RunStokesMGStudy(mesh_ptr, 6, save_results);
+    RunStokesMGStudy(mesh_ptr, 5, save_results);
 
     return 0;
 }
