@@ -42,9 +42,11 @@ public:
     StokesMG(const StokesMG&) = delete;
     StokesMG& operator=(const StokesMG&) = delete;
 
-    /** @brief Refines and adds a new MG level. */
-    void addRefinement(const RefinementType reftype = RefinementType::Geometric,
+    /** @brief Refines and adds a new MG level. order_ref == 0: do h-refinement*/
+    void addRefinement(const unsigned order_ref = 0,
                        double penalty = -1);
+
+    void removeRefinement();
 
     void setCoarseSolver(std::shared_ptr<const mfem::Solver> solver)
     { coarse_solver_ = std::move(solver); }
@@ -149,7 +151,7 @@ private:
     void buildTransfers(const StokesNitscheOperator& coarse,
                         const StokesNitscheOperator& fine,
                         std::unique_ptr<const mfem::Operator>& T,
-                        const RefinementType reftype) const;
+                        const unsigned order_ref) const;
 };
 
 } // namespace StokesNitsche

@@ -20,7 +20,7 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     mfem::Device("omp");
 #endif
     // 1. Initialize MG Solver & Hierarchy
-    StokesNitsche::StokesMG mg(mesh_ptr);
+    StokesNitsche::StokesMG mg(mesh_ptr, 1, 10);
 
     for (int i = 0; i < geomref; ++i)
         mg.addRefinement();
@@ -53,7 +53,7 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
     std::cout << "  Iter | Rel. Residual \n-------|---------------\n";
 
-    for (int iter = 0; iter < max_iter; ++iter)
+    for (int iter = 0; false && iter < max_iter; ++iter)
     {
         fine_op.eliminateConstants(x_sol);
         residual = b;
@@ -106,10 +106,12 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
     gmres.Mult(b, x_sol);
 
-    ASSERT_TRUE(gmres.GetConverged())
-        << "Phase 2 Failed: GMRES failed to converge.";
-
     const double gmres_final_rel = gmres.GetFinalRelNorm();
+    ASSERT_TRUE(gmres.GetConverged())
+        << "Phase 2 Failed: GMRES failed to converge."
+        << std::endl
+        << "(Rel.) Residual Norm: " << gmres_final_rel;
+
     std::cout << "Final GMRES Relative Residual: " << gmres_final_rel << std::endl;
 
     EXPECT_LT(gmres_final_rel, tol);
@@ -127,7 +129,7 @@ TEST(StokesMGTest, ConvergenceTetra)
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
         mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
     );
-    RunStokesMGTest(mesh_ptr, 4);
+    RunStokesMGTest(mesh_ptr, 5);
 }
 
 

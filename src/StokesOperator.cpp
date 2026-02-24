@@ -12,21 +12,28 @@ void StokesNitscheOperator::initFESpaces()
                 "StokesNitscheOperator: order == 0, use order > 0");
     const int dim = mesh_->Dimension();
 
-    // 1. Create Collections
-    h1_fec_ = std::make_unique<mfem::H1_FECollection>(order_, dim);
-    hcurl_fec_ = std::make_unique<mfem::ND_FECollection>(order_, dim);
+    h1_fec_ = std::make_unique<mfem::H1_FECollection>(
+        order_, dim
+    );
+
+    hcurl_fec_ = std::make_unique<mfem::ND_FECollection>(
+        order_, dim
+    );
 
     if (dim == 2)
+    {
         hdiv_or_l2_fec_ = std::make_unique<mfem::L2_FECollection>(
             0, dim, mfem::BasisType::GaussLegendre,
             mfem::FiniteElement::INTEGRAL
         );
+    }
     else
+    {
         hdiv_or_l2_fec_ = std::make_unique<mfem::RT_FECollection>(
             order_ - 1, dim
         );
+    }
 
-    // 2. Create Spaces
     h1_space_ = std::make_unique<mfem::FiniteElementSpace>(
         mesh_.get(), h1_fec_.get()
     );
@@ -52,34 +59,42 @@ void StokesNitscheOperator::initMass()
 {
     mass_h1_ = std::make_unique<mfem::BilinearForm>(h1_space_.get());
     mass_hcurl_ = std::make_unique<mfem::BilinearForm>(hcurl_space_.get());
-    mass_hdiv_or_l2_ = std::make_unique<mfem::BilinearForm>(
-        hdiv_or_l2_space_.get()
-    );
+    mass_hdiv_or_l2_ = std::make_unique<mfem::BilinearForm>(hdiv_or_l2_space_.get());
 
     mfem::ConstantCoefficient one(1.0);
 
+    // If we need RowSums, we CANNOT use partial assembly because we need the explicit sparse matrix.
+    // NOTE: Maybe with libCEED? For whatever reason,
+    //       mfem cannot deal even with mass matrices in any assembly
+    //       mode other than full in 3D ...
+    const bool use_pa = false; //(ml_ != MassLumping::RowSum);
+
+    if (use_pa)
+    {
+        mass_h1_->SetAssemblyLevel(mfem::AssemblyLevel::PARTIAL);
+        mass_hcurl_->SetAssemblyLevel(mfem::AssemblyLevel::PARTIAL);
+        mass_hdiv_or_l2_->SetAssemblyLevel(mfem::AssemblyLevel::PARTIAL);
+    }
+
     mass_h1_->AddDomainIntegrator(new mfem::MassIntegrator(one));
-    mass_hcurl_->AddDomainIntegrator(
-        new mfem::VectorFEMassIntegrator(one)
-    );
+    mass_hcurl_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(one));
 
     if (mesh_->Dimension() == 2)
-        mass_hdiv_or_l2_->AddDomainIntegrator(
-            new mfem::MassIntegrator(one)
-        );
+        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::MassIntegrator(one));
     else
-        mass_hdiv_or_l2_->AddDomainIntegrator(
-            new mfem::VectorFEMassIntegrator(one)
-        );
+        mass_hdiv_or_l2_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(one));
 
     mass_h1_->Assemble();
-    mass_h1_->Finalize();
-
     mass_hcurl_->Assemble();
-    mass_hcurl_->Finalize();
-
     mass_hdiv_or_l2_->Assemble();
-    mass_hdiv_or_l2_->Finalize();
+
+    // Only Finalize (which builds the CSR structure) if we are not using PA
+    if (!use_pa)
+    {
+        mass_h1_->Finalize();
+        mass_hcurl_->Finalize();
+        mass_hdiv_or_l2_->Finalize();
+    }
 }
 
 void StokesNitscheOperator::initLumpedMass()
@@ -93,6 +108,8 @@ void StokesNitscheOperator::initLumpedMass()
         case MassLumping::None:
             break;
         case MassLumping::Diagonal:
+            // AssembleDiagonal seamlessly supports (or should support)
+            // Partial Assembly matrices!
             mass_h1_->AssembleDiagonal(mass_h1_lumped_);
             mass_hcurl_->AssembleDiagonal(mass_hcurl_lumped_);
             mass_hdiv_or_l2_->AssembleDiagonal(mass_hdiv_or_l2_lumped_);
@@ -111,7 +128,7 @@ void StokesNitscheOperator::initLumpedMass()
                 #pragma omp parallel for
                 for (int i = 0; i < A.Height(); ++i)
                 {
-                    const int      nnz = A.RowSize(i);
+                    const int    nnz = A.RowSize(i);
                     const double* vals = A.GetRowEntries(i);
                     double s = 0.0;
                     for (int k = 0; k < nnz; ++k)
@@ -120,6 +137,7 @@ void StokesNitscheOperator::initLumpedMass()
                 }
             };
 
+            // This only works because we turned off PA for RowSum in initMass()
             sum_rows(mass_h1_->SpMat(), mass_h1_lumped_);
             sum_rows(mass_hcurl_->SpMat(), mass_hcurl_lumped_);
             sum_rows(mass_hdiv_or_l2_->SpMat(), mass_hdiv_or_l2_lumped_);
@@ -167,8 +185,6 @@ StokesNitscheOperator::StokesNitscheOperator(
     offsets_[1] = hcurl_space_->GetNDofs();
     offsets_[2] = hcurl_space_->GetNDofs() +
                   h1_space_->GetNDofs();
-    // offsets_[3] = hcurl_space_->GetNDofs() +
-                  // h1_space_->GetNDofs() + 1;
 }
 
 // -------------------------------------------------------------------------
@@ -227,6 +243,7 @@ StokesNitscheOperator::getFullGalerkinSystem() const
 
     mfem::Vector mass_x_ones(nv);
 
+    // Mult works perfectly with both Partial and Full assembly!
     mass_h1_->Mult(ones, mass_x_ones);
 
     mean.AddRow(0, cols, mass_x_ones);
@@ -335,7 +352,7 @@ void StokesNitscheOperator::eliminateConstants(mfem::Vector& x) const
 
     if (opmode_ == OperatorMode::Galerkin)
     {
-        // M_ones = M * ones
+        // Mult works perfectly with both Partial and Full assembly!
         mass_h1_->Mult(ones, M_ones);
     }
     else // DEC

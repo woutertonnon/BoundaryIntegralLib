@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
     // Refinement Loop
     for (int r = 1; r <= max_refinements; ++r)
     {
-        mg.addRefinedLevel();
+        mg.addRefinement();
 
         const auto& finest_op = mg.getFinestOperator();
         const int dofs = finest_op.NumRows();

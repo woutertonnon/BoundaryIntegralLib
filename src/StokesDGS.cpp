@@ -87,7 +87,7 @@ void StokesNitscheDGS::initSmoothers()
     // Inefficient, but for testing, we can try Chebyshev
     else if (st_ == SmootherType::Chebyshev)
     {
-        const int poly_order = 2;
+        const int poly_order = 3;
 
         // Chebyshev smoother requires an array of essential true DOFs.
         // We pass an empty array since Nitsche's method handles boundaries weakly.
@@ -157,6 +157,20 @@ void StokesNitscheDGS::computeCorrection() const
 {
     corr_ = 0.0;
     block_prec_->Mult(residual_, corr_);
+
+    // const unsigned ne = op_->getHCurlSpace().GetNDofs(),
+    //                nv = op_->getH1Space().GetNDofs();
+    //
+    // mfem::Vector r_u(residual_, 0, ne);
+    // mfem::Vector r_p(residual_, ne, nv);
+    //
+    // mfem::Vector corr_u(corr_, 0, ne);
+    // mfem::Vector corr_p(corr_, ne, nv);
+    //
+    // mfem::Vector tmp(ne);
+    //
+    // bd_->Mult(corr_p, tmp);
+    // smoother_u_->AddMult(tmp, corr_u, -1.0);
 }
 
 void StokesNitscheDGS::distributeCorrection(mfem::Vector& y) const

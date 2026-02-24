@@ -139,7 +139,12 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
     for (int l = 0; l <= max_refs; ++l)
     {
         if (l > 0)
-            mg_solver.addRefinedLevel();
+        {
+            mg_solver.removeRefinement();
+            mg_solver.addRefinement();
+        }
+        mg_solver.addRefinement(2);
+
 
         StokesNitsche::StokesNitscheOperator& op =
             *const_cast<StokesNitsche::StokesNitscheOperator*>(&mg_solver.getFinestOperator());

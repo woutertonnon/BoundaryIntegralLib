@@ -52,8 +52,8 @@ double computeCWBound(mfem::Mesh& mesh,
                       const double factor)
 {
     const double res = factor * 4. * order * (order + 2) * computeCReg(mesh) / 3.;
-    std::cout << "CReg: " << computeCReg(mesh) << std::endl;
-    std::cout << "CW: " << res << std::endl;
+    // std::cout << "CReg: " << computeCReg(mesh) << std::endl;
+    // std::cout << "CW: " << res << std::endl;
     return res;
 }
 
@@ -112,7 +112,7 @@ StokesMG::StokesMG(std::shared_ptr<mfem::Mesh> coarse_mesh,
 #endif
 }
 
-void StokesMG::addRefinement(const RefinementType reftype,
+void StokesMG::addRefinement(const unsigned order_ref,
                              double penalty)
 {
     Level& coarse_lvl = *levels_.back();
@@ -120,7 +120,7 @@ void StokesMG::addRefinement(const RefinementType reftype,
     std::shared_ptr<mfem::Mesh> fine_mesh;
     std::shared_ptr<StokesNitscheOperator> fine_op;
 
-    if(reftype == RefinementType::Geometric)
+    if(!order_ref)
     {
         MFEM_VERIFY(order_ == 1,
                     "StokesMG::addRefinement: Doing geometric refinement after p-refinement!");
@@ -136,7 +136,7 @@ void StokesMG::addRefinement(const RefinementType reftype,
     }
     else // reftype == RefinementType::PRef
     {
-        ++order_;
+        order_ += order_ref;
         // fine_mesh == coarse_mesh, only p is different
         fine_mesh = coarse_lvl.op->getMeshPtr();
 
@@ -147,11 +147,10 @@ void StokesMG::addRefinement(const RefinementType reftype,
             fine_mesh, order_, theta_, penalty, factor_, ml_
         );
     }
-    // fine_op->setDECMode();
     auto fine_smoother = std::make_shared<StokesNitscheDGS>(fine_op, st_);
 
     std::unique_ptr<const mfem::Operator> T;
-    buildTransfers(*coarse_lvl.op, *fine_op, T, reftype);
+    buildTransfers(*coarse_lvl.op, *fine_op, T, order_ref);
 
     height = fine_op->NumRows();
     width = fine_op->NumCols();
@@ -159,6 +158,13 @@ void StokesMG::addRefinement(const RefinementType reftype,
     levels_.push_back(std::make_unique<Level>(std::move(fine_op),
                                               std::move(fine_smoother),
                                               std::move(T)));
+}
+
+void StokesMG::removeRefinement()
+{
+    if (levels_.size() > 1)
+        levels_.pop_back();
+    order_ = levels_.back()->op->getOrder();
 }
 
 // Helper Struct for transfer operators
@@ -194,7 +200,7 @@ struct TransferOperator : public mfem::Operator
 void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
                               const StokesNitscheOperator& fine,
                               std::unique_ptr<const mfem::Operator>& T,
-                              const RefinementType reftype) const
+                              const unsigned order_ref) const
 {
     auto T_block = std::make_unique<mfem::BlockOperator>(
         fine.getOffsets(), coarse.getOffsets()
@@ -207,7 +213,7 @@ void StokesMG::buildTransfers(const StokesNitscheOperator& coarse,
     {
         mfem::Operator* base_P = nullptr;
 
-        if (reftype == RefinementType::Geometric)
+        if (!order_ref)
         {
             mfem::OperatorPtr P_ptr;
             f_fes.GetTransferOperator(c_fes, P_ptr);
@@ -283,24 +289,18 @@ void StokesMG::cycle(const int level_idx,
 
     Level& coarse_lvl = *levels_[level_idx - 1];
 
-    unsigned pre_smooth  = pre_smooth_,
-             post_smooth = post_smooth_;
 
+
+    unsigned fac = 1;
     if(cycle_type_ == MGCycleType::VariableVCycle)
-    {
-        const unsigned fac = getFinestOperator().NumRows() / lvl.op->NumRows();
-        pre_smooth *= fac;
-        post_smooth *= fac;
-    }
+        fac = getFinestOperator().NumRows() / lvl.op->NumRows();
 
-    for (int i = 0; i < pre_smooth; ++i)
+    for (int i = 0; i < fac * pre_smooth_; ++i)
         lvl.smoother->Mult(b, x);
 
     lvl.op->MultDEC(x, lvl.res);
     lvl.res -= b;
-    // lvl.res.Neg();
 
-    // lvl.R->Mult(lvl.res, coarse_lvl.b);
     lvl.T->MultTranspose(lvl.res, coarse_lvl.b);
 
     coarse_lvl.x = 0.0;
@@ -309,12 +309,10 @@ void StokesMG::cycle(const int level_idx,
     if (cycle_type_ == MGCycleType::WCycle)
         cycle(level_idx - 1, coarse_lvl.b, coarse_lvl.x);
 
-    // lvl.P->Mult(coarse_lvl.x, lvl.res);
     lvl.T->Mult(coarse_lvl.x, lvl.res);
-    // x += lvl.res;
     x -= lvl.res;
 
-    for (int i = 0; i < post_smooth; ++i)
+    for (int i = 0; i < fac * post_smooth_; ++i)
         lvl.smoother->Mult(b, x);
 }
 
