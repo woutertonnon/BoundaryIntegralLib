@@ -67,14 +67,14 @@ void StokesNitscheOperator::initMass()
     // NOTE: Maybe with libCEED? For whatever reason,
     //       mfem cannot deal even with mass matrices in any assembly
     //       mode other than full in 3D ...
-    const bool use_pa = (ml_ != MassLumping::RowSum);
 
-    if (use_pa)
-    {
-        mass_h1_->SetAssemblyLevel(mfem::AssemblyLevel::PARTIAL);
-        mass_hcurl_->SetAssemblyLevel(mfem::AssemblyLevel::PARTIAL);
-        mass_hdiv_or_l2_->SetAssemblyLevel(mfem::AssemblyLevel::PARTIAL);
-    }
+    mfem::AssemblyLevel assembly_level = mfem::AssemblyLevel::FULL;
+    if (ml_ != MassLumping::RowSum)
+        assembly_level = mfem::AssemblyLevel::PARTIAL;
+
+    mass_h1_->SetAssemblyLevel(assembly_level);
+    mass_hcurl_->SetAssemblyLevel(assembly_level);
+    mass_hdiv_or_l2_->SetAssemblyLevel(assembly_level);
 
     mass_h1_->AddDomainIntegrator(new mfem::MassIntegrator(one));
     mass_hcurl_->AddDomainIntegrator(new mfem::VectorFEMassIntegrator(one));
@@ -88,13 +88,10 @@ void StokesNitscheOperator::initMass()
     mass_hcurl_->Assemble();
     mass_hdiv_or_l2_->Assemble();
 
-    // Only Finalize (which builds the CSR structure) if we are not using PA
-    //if (!use_pa)
-    {
-        mass_h1_->Finalize();
-        mass_hcurl_->Finalize();
-        mass_hdiv_or_l2_->Finalize();
-    }
+    mass_h1_->Finalize();
+    mass_hcurl_->Finalize();
+    mass_hdiv_or_l2_->Finalize();
+    
 }
 
 void StokesNitscheOperator::initLumpedMass()
