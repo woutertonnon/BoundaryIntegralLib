@@ -66,10 +66,10 @@ void StokesNitscheOperator::initMass()
     // If we need RowSums, we CANNOT use partial assembly because we need the explicit sparse matrix.
     // NOTE: Maybe with libCEED? For whatever reason,
     //       mfem cannot deal even with mass matrices in any assembly
-    //       mode other than full in 3D ...
+    //       mode other than LEGACY in 3D it seems (for tets) ...
 
-    mfem::AssemblyLevel assembly_level = mfem::AssemblyLevel::FULL;
-    if (ml_ != MassLumping::RowSum)
+    mfem::AssemblyLevel assembly_level = mfem::AssemblyLevel::LEGACY;
+    if (ml_ != MassLumping::RowSum && false)
         assembly_level = mfem::AssemblyLevel::PARTIAL;
 
     mass_h1_->SetAssemblyLevel(assembly_level);

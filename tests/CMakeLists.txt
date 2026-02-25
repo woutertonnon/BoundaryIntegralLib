@@ -27,13 +27,6 @@ add_executable(stokesdgs_tests
 add_executable(stokesmg_tests
     StokesMGTest.cpp
 )
-add_executable(mgconvergence
-    MGConvergence.cpp
-)
-add_executable(femconvergence
-    FEMConvergence.cpp
-)
-
 
 target_link_libraries(incidence_tests
     PRIVATE
@@ -130,27 +123,6 @@ target_link_libraries(stokesmg_tests
         ${GTEST_MAIN_LIBRARIES}
         pthread
 )
-
-target_link_libraries(mgconvergence
-    PRIVATE
-        stokesoperator
-        stokesdgs
-        stokesmg
-        Eigen3::Eigen
-        mfem
-        Boost::program_options
-        spectra_mfem
-)
-
-target_link_libraries(femconvergence
-    PRIVATE
-        stokesoperator
-        stokesdgs
-        stokesmg
-        mfem
-        Boost::program_options
-)
-
 
 add_test(NAME incidence_tests COMMAND incidence_tests)
 add_test(NAME boundaryoperators_tests COMMAND boundaryoperators_tests)

@@ -147,7 +147,7 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
             mg_solver.removeRefinement();
             mg_solver.addRefinement();
         }
-        mg_solver.addRefinement(2);
+        mg_solver.addRefinement(1);
 
 
         StokesNitsche::StokesNitscheOperator& op =

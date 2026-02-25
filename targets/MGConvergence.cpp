@@ -55,14 +55,14 @@ int runGMRES(const mfem::Operator& A,
 
 int main(int argc, char* argv[])
 {
-#ifdef NDEBUG
+#ifdef MFEM_USE_OPENMP
     mfem::Device device("omp");
     // device.Print(std::cout);
 #endif
 
     std::string mesh_file, output_file, cycle_str;
     int max_refinements, nev, n_gmres;
-    double gmres_tol, eval_tol;
+    double gmres_tol, eval_tol, penalty;
     bool verbose;
 
     // Parse command line options
@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
         ("mesh,m", po::value<std::string>(&mesh_file)->required(), "mesh filename")
         ("refinements,r", po::value<int>(&max_refinements)->required(), "number of refinements")
         ("output,o", po::value<std::string>(&output_file)->default_value("out.csv"), "output csv filename")
+        ("penalty,p", po::value<double>(&penalty)->default_value(10.0), "Nitsche penalty parameter")
         ("nev,n", po::value<int>(&nev)->default_value(1), "number of eigenvalues (0 to skip)")
         ("gmres,g", po::value<int>(&n_gmres)->default_value(1), "number of GMRES runs")
         ("verbose,v", po::bool_switch(&verbose)->default_value(false), "enable verbose output")
@@ -96,10 +97,13 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    const double theta = 1.0,
-                 penalty = 10.0,
-                 factor = 1.0;
+    // Parameters
+    const double theta = 1.0;
+    const double factor = 1.0;
+
     auto mesh_ptr = std::make_shared<mfem::Mesh>(mesh_file.c_str(), 1, 1);
+
+    // Initialize Multigrid with the penalty from command line
     StokesNitsche::StokesMG mg(
       mesh_ptr, theta, penalty, factor,
       StokesNitsche::MassLumping::Diagonal,
@@ -129,7 +133,9 @@ int main(int argc, char* argv[])
     if (verbose)
     {
         std::cout << std::string(75, '=') << "\n";
-        std::cout << "Mesh: " << mesh_file << ", Refinements: " << max_refinements << "\n";
+        std::cout << "Mesh: " << mesh_file << "\n";
+        std::cout << "Penalty: " << penalty << "\n";
+        std::cout << "Refinements: " << max_refinements << "\n";
         std::cout << std::string(75, '=') << "\n";
     }
 
