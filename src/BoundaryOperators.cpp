@@ -361,6 +361,284 @@ void ND_UpwindIntegrator::AssembleFaceMatrix(
 }
 
 
+// ---------------------------------------------------------------------------
+// RT_DivJumpIntegrator
+// ---------------------------------------------------------------------------
+//
+// Assembles the symmetric ghost penalty on a single interior face:
+//
+//   (gamma * nu * h_F) * int_F [[div u]] [[div v]] dF
+//
+// where [[div u]] = div(u^+) - div(u^-).  For RT elements div(u) is a
+// scalar in L2, so the jump is a scalar quantity.
+//
+// The combined element matrix has the block structure
+//   [  M11  -M12 ]
+//   [ -M21   M22 ]
+//
+void RT_DivJumpIntegrator::AssembleFaceMatrix(
+    const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
+    mfem::FaceElementTransformations &Trans, mfem::DenseMatrix &elmat)
+{
+    MFEM_ASSERT(Trans.Elem2No >= 0,
+                "RT_DivJumpIntegrator: expected an interior face");
+
+    const int dof1 = el1.GetDof();
+    const int dof2 = el2.GetDof();
+    const int ndof = dof1 + dof2;
+    const int dim  = el1.GetDim();
+
+    elmat.SetSize(ndof, ndof);
+    elmat = 0.;
+
+    const int order = 2 * std::max(el1.GetOrder(), el2.GetOrder()) + 1;
+    const mfem::IntegrationRule &ir =
+        mfem::IntRules.Get(Trans.FaceGeom, order);
+
+    mfem::Vector normal(dim);
+    mfem::Vector div_shape1(dof1), div_shape2(dof2);
+
+    for (int q = 0; q < ir.GetNPoints(); ++q)
+    {
+        const mfem::IntegrationPoint &ip = ir.IntPoint(q);
+        Trans.SetAllIntPoints(&ip);
+
+        Trans.Face->SetIntPoint(&ip);
+        mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
+        const double jac = normal.Norml2();   // |J_face|
+        const double h   = std::sqrt(jac);    // h_F ~ face length
+        // Ghost-penalty weight: gamma * nu * h_F * dA
+        const double w   = ip.weight * jac * gamma_ * factor_ * h;
+
+        el1.CalcPhysDivShape(*Trans.Elem1, div_shape1);
+        el2.CalcPhysDivShape(*Trans.Elem2, div_shape2);
+
+        // ++ block
+        for (int l = 0; l < dof1; ++l)
+            for (int k = 0; k < dof1; ++k)
+                elmat(l, k) += w * div_shape1(k) * div_shape1(l);
+
+        // +- block
+        for (int l = 0; l < dof1; ++l)
+            for (int k = 0; k < dof2; ++k)
+                elmat(l, dof1 + k) -= w * div_shape2(k) * div_shape1(l);
+
+        // -+ block
+        for (int l = 0; l < dof2; ++l)
+            for (int k = 0; k < dof1; ++k)
+                elmat(dof1 + l, k) -= w * div_shape1(k) * div_shape2(l);
+
+        // -- block
+        for (int l = 0; l < dof2; ++l)
+            for (int k = 0; k < dof2; ++k)
+                elmat(dof1 + l, dof1 + k) += w * div_shape2(k) * div_shape2(l);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// RT_BdrTangentPenaltyIntegrator
+// ---------------------------------------------------------------------------
+//
+// Assembles the boundary penalty on each boundary face F:
+//
+//   (Cw / h_F) * int_F (n x u) . (n x v) dF
+//
+void RT_BdrTangentPenaltyIntegrator::AssembleFaceMatrix(
+    const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
+    mfem::FaceElementTransformations &Trans, mfem::DenseMatrix &elmat)
+{
+    MFEM_ASSERT(Trans.Elem2No < 0,
+                "RT_BdrTangentPenaltyIntegrator: expected a boundary face");
+
+    const int dof = el1.GetDof();
+    const int dim = el1.GetDim();
+
+    elmat.SetSize(dof, dof);
+    elmat = 0.0;
+
+    const mfem::IntegrationRule &ir = mfem::IntRules.Get(
+        static_cast<mfem::Geometry::Type>(Trans.FaceGeom),
+        2 * el1.GetOrder() + 1);
+
+    mfem::Vector normal(dim);
+    mfem::DenseMatrix shape(dof, dim);
+
+    for (int q = 0; q < ir.GetNPoints(); ++q)
+    {
+        const mfem::IntegrationPoint &ip_face = ir.IntPoint(q);
+        Trans.SetAllIntPoints(&ip_face);
+
+        Trans.Face->SetIntPoint(&ip_face);
+        mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
+
+        double area = normal.Norml2();
+        double h = sqrt(area);
+        normal *= 1.0 / area; // unit normal
+
+        el1.CalcVShape(*Trans.Elem1, shape);
+
+        double w = ip_face.weight * area * Cw_ / h;
+
+        for (int l = 0; l < dof; ++l)
+        {
+            mfem::Vector v(dim), n_x_v(dim);
+            shape.GetRow(l, v);
+            normal.cross3D(v, n_x_v);
+
+            for (int k = 0; k < dof; ++k)
+            {
+                mfem::Vector u(dim), n_x_u(dim);
+                shape.GetRow(k, u);
+                normal.cross3D(u, n_x_u);
+
+                elmat(l, k) += w * (n_x_u * n_x_v);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// RT_ND_BdrCrossProductIntegrator
+// ---------------------------------------------------------------------------
+//
+// Assembles the boundary face matrix for the mixed bilinear form:
+//
+//   b_bdr(u, eta) = int_F (n x u_RT) . eta_ND dS
+//
+// trial_fe1 is the RT element (trial), test_fe1 is the ND element (test).
+// The output elmat has size (test_dof x trial_dof).
+//
+void RT_ND_BdrCrossProductIntegrator::AssembleFaceMatrix(
+    const mfem::FiniteElement &trial_fe1,
+    const mfem::FiniteElement &test_fe1,
+    const mfem::FiniteElement &trial_fe2,
+    const mfem::FiniteElement &test_fe2,
+    mfem::FaceElementTransformations &Trans,
+    mfem::DenseMatrix &elmat)
+{
+    MFEM_ASSERT(Trans.Elem2No < 0,
+                "RT_ND_BdrCrossProductIntegrator: expected a boundary face");
+
+    const int trial_dof = trial_fe1.GetDof(); // RT DOFs
+    const int test_dof  = test_fe1.GetDof();  // ND DOFs
+    const int dim       = trial_fe1.GetDim();
+
+    elmat.SetSize(test_dof, trial_dof);
+    elmat = 0.0;
+
+    const mfem::IntegrationRule &ir = mfem::IntRules.Get(
+        static_cast<mfem::Geometry::Type>(Trans.FaceGeom),
+        2 * std::max(trial_fe1.GetOrder(), test_fe1.GetOrder()) + 1);
+
+    mfem::Vector normal(dim);
+    mfem::DenseMatrix trial_shape(trial_dof, dim); // RT shape
+    mfem::DenseMatrix test_shape(test_dof, dim);   // ND shape
+
+    for (int q = 0; q < ir.GetNPoints(); ++q)
+    {
+        const mfem::IntegrationPoint &ip_face = ir.IntPoint(q);
+        Trans.SetAllIntPoints(&ip_face);
+
+        // Outward normal (unnormalised, |normal| = face area element)
+        Trans.Face->SetIntPoint(&ip_face);
+        mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
+
+        // Evaluate shapes on the volume element (Elem1 side)
+        trial_fe1.CalcVShape(*Trans.Elem1, trial_shape);
+        test_fe1.CalcVShape(*Trans.Elem1, test_shape);
+
+        double w = ip_face.weight; // face quadrature weight
+        // Note: CalcOrtho already includes the face Jacobian determinant,
+        // so w * normal gives the full measure-weighted normal.
+
+        for (int j = 0; j < test_dof; ++j)
+        {
+            mfem::Vector eta(dim);
+            test_shape.GetRow(j, eta);
+
+            for (int i = 0; i < trial_dof; ++i)
+            {
+                mfem::Vector u(dim), n_cross_u(dim);
+                trial_shape.GetRow(i, u);
+                normal.cross3D(u, n_cross_u); // n x u
+
+                elmat(j, i) += w * (n_cross_u * eta);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// RT_BdrTangentPenaltyLFIntegrator
+// ---------------------------------------------------------------------------
+//
+// Assembles the RHS consistency term on each boundary face F:
+//
+//   (Cw / h_F) * int_F (n x u_D) . (n x v) dF
+//
+void RT_BdrTangentPenaltyLFIntegrator::AssembleRHSElementVect(
+    const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,
+    mfem::Vector &elvect)
+{
+    MFEM_ABORT("RT_BdrTangentPenaltyLFIntegrator: element assembly not supported; "
+               "use AddBdrFaceIntegrator");
+}
+
+void RT_BdrTangentPenaltyLFIntegrator::AssembleRHSElementVect(
+    const mfem::FiniteElement &el, mfem::FaceElementTransformations &Tr,
+    mfem::Vector &elvect)
+{
+    MFEM_ASSERT(Tr.Elem2No < 0,
+                "RT_BdrTangentPenaltyLFIntegrator: expected a boundary face");
+
+    const int dof = el.GetDof();
+    const int dim = el.GetDim();
+
+    elvect.SetSize(dof);
+    elvect = 0.0;
+
+    const mfem::IntegrationRule &ir = mfem::IntRules.Get(
+        static_cast<mfem::Geometry::Type>(Tr.FaceGeom),
+        2 * el.GetOrder() + 1);
+
+    mfem::Vector normal(dim), uD_val(dim);
+    mfem::DenseMatrix shape(dof, dim);
+
+    for (int q = 0; q < ir.GetNPoints(); ++q)
+    {
+        const mfem::IntegrationPoint &ip_face = ir.IntPoint(q);
+        Tr.SetAllIntPoints(&ip_face);
+
+        Tr.Face->SetIntPoint(&ip_face);
+        mfem::CalcOrtho(Tr.Face->Jacobian(), normal);
+
+        double area = normal.Norml2();
+        double h = sqrt(area);
+        normal *= 1.0 / area; // unit normal
+
+        el.CalcVShape(*Tr.Elem1, shape);
+
+        // Evaluate boundary data u_D at this point
+        mfem::Vector phys_pt;
+        Tr.Transform(ip_face, phys_pt);
+        uD_.Eval(uD_val, *Tr.Elem1, Tr.Elem1->GetIntPoint());
+
+        mfem::Vector n_x_uD(dim);
+        normal.cross3D(uD_val, n_x_uD);
+
+        double w = ip_face.weight * area * Cw_ / h;
+
+        for (int j = 0; j < dof; ++j)
+        {
+            mfem::Vector v(dim), n_x_v(dim);
+            shape.GetRow(j, v);
+            normal.cross3D(v, n_x_v);
+
+            elvect(j) += w * (n_x_uD * n_x_v);
+        }
+    }
+}
+
 void ND_NitscheIntegrator::AssembleElementMatrix(const mfem::FiniteElement &el, mfem::ElementTransformation &Trans,
                                              mfem::DenseMatrix &elmat)
 {

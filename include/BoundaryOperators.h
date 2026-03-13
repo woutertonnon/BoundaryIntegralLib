@@ -153,6 +153,149 @@ public:
                             mfem::DenseMatrix &elmat);
 };
 
+// Interior-face div-jump ghost penalty for H(div) / RT spaces.
+//
+// Adds the symmetric ghost penalty:
+//
+//   g_h(u,v) = (gamma * factor * h_F) * sum_{F interior} int_F [[div u]] [[div v]] dF
+//
+// where [[div u]] = div(u^+) - div(u^-) is the divergence jump across the face.
+// For RT elements div(u) is discontinuous at faces (it lives in L2); these
+// jumps feed into the pressure coupling and can seed spurious oscillations.
+//
+// Scaling is h_F (not 1/h_F): the ghost-penalty scaling.  Dimensionally,
+// [[div u]] ~ u/h, so (h_F) * [[div u]]^2 * h^2 ~ u^2/h matches the
+// DG penalty term.  The penalty therefore vanishes as h->0 and does not
+// degrade the optimal convergence rate.
+//
+// Usage: blf.AddInteriorFaceIntegrator(new RT_DivJumpIntegrator(gamma, nu));
+class RT_DivJumpIntegrator : public mfem::BilinearFormIntegrator
+{
+protected:
+    double gamma_, factor_;
+
+public:
+    RT_DivJumpIntegrator(double gamma, double factor = 1.)
+        : gamma_(gamma), factor_(factor) {}
+
+    virtual void AssembleElementMatrix(const mfem::FiniteElement &el,
+                                       mfem::ElementTransformation &Trans,
+                                       mfem::DenseMatrix &elmat)
+    {
+        MFEM_ABORT("RT_DivJumpIntegrator: only interior-face assembly is supported");
+    }
+
+    void AssembleFaceMatrix(const mfem::FiniteElement &el1,
+                            const mfem::FiniteElement &el2,
+                            mfem::FaceElementTransformations &Trans,
+                            mfem::DenseMatrix &elmat);
+};
+
+// Boundary face integrator for a MixedBilinearForm with trial space RT
+// and test space ND.  Computes the boundary term arising from integration
+// by parts of the vorticity equation:
+//
+//   (curl u, eta) = (u, curl eta) + int_{partial Omega} (u x n) . eta dS
+//
+// This integrator assembles the surface integral
+//
+//   b_bdr(u, eta) = int_F (n x u_RT) . eta_ND dS
+//
+// on each boundary face F.  It must be added via
+//   mixed_blf.AddBdrFaceIntegrator(new RT_ND_BdrCrossProductIntegrator());
+//
+// The 4-argument AssembleFaceMatrix overload is used by MixedBilinearForm;
+// the 2-argument version is not supported.
+class RT_ND_BdrCrossProductIntegrator : public mfem::BilinearFormIntegrator
+{
+public:
+    RT_ND_BdrCrossProductIntegrator() {}
+
+    virtual void AssembleElementMatrix(const mfem::FiniteElement &el,
+                                       mfem::ElementTransformation &Trans,
+                                       mfem::DenseMatrix &elmat)
+    {
+        MFEM_ABORT("RT_ND_BdrCrossProductIntegrator: element assembly not supported");
+    }
+
+    void AssembleFaceMatrix(const mfem::FiniteElement &el1,
+                            const mfem::FiniteElement &el2,
+                            mfem::FaceElementTransformations &Trans,
+                            mfem::DenseMatrix &elmat)
+    {
+        MFEM_ABORT("RT_ND_BdrCrossProductIntegrator: 2-arg face assembly not supported; "
+                    "use MixedBilinearForm::AddBdrFaceIntegrator");
+    }
+
+    void AssembleFaceMatrix(const mfem::FiniteElement &trial_fe1,
+                            const mfem::FiniteElement &test_fe1,
+                            const mfem::FiniteElement &trial_fe2,
+                            const mfem::FiniteElement &test_fe2,
+                            mfem::FaceElementTransformations &Trans,
+                            mfem::DenseMatrix &elmat);
+};
+
+// Boundary face penalty for H(div) / RT spaces.
+//
+// Adds the Nitsche-style tangential penalty on boundary faces:
+//
+//   (Cw / h_F) * int_{partial Omega} (n x u) . (n x v) dS
+//
+// This penalises the tangential component of u on the boundary.
+// For RT elements the normal component is strongly enforced via essential
+// BCs, so this term controls the tangential trace.
+//
+// Usage: blf.AddBdrFaceIntegrator(new RT_BdrTangentPenaltyIntegrator(Cw));
+class RT_BdrTangentPenaltyIntegrator : public mfem::BilinearFormIntegrator
+{
+protected:
+    double Cw_;
+
+public:
+    RT_BdrTangentPenaltyIntegrator(double Cw) : Cw_(Cw) {}
+
+    virtual void AssembleElementMatrix(const mfem::FiniteElement &el,
+                                       mfem::ElementTransformation &Trans,
+                                       mfem::DenseMatrix &elmat)
+    {
+        MFEM_ABORT("RT_BdrTangentPenaltyIntegrator: only boundary-face assembly is supported");
+    }
+
+    void AssembleFaceMatrix(const mfem::FiniteElement &el1,
+                            const mfem::FiniteElement &el2,
+                            mfem::FaceElementTransformations &Trans,
+                            mfem::DenseMatrix &elmat);
+};
+
+// Boundary face RHS integrator for H(div) / RT spaces (consistency term).
+//
+// Computes the linear form contribution:
+//
+//   (Cw / h_F) * int_{partial Omega} (n x u_D) . (n x v) dS
+//
+// where u_D is the prescribed boundary data coefficient.
+// This is the RHS counterpart of RT_BdrTangentPenaltyIntegrator.
+//
+// Usage: lf.AddBdrFaceIntegrator(new RT_BdrTangentPenaltyLFIntegrator(Cw, u_D));
+class RT_BdrTangentPenaltyLFIntegrator : public mfem::LinearFormIntegrator
+{
+protected:
+    double Cw_;
+    mfem::VectorCoefficient &uD_;
+
+public:
+    RT_BdrTangentPenaltyLFIntegrator(double Cw, mfem::VectorCoefficient &uD)
+        : Cw_(Cw), uD_(uD) {}
+
+    virtual void AssembleRHSElementVect(const mfem::FiniteElement &el,
+                                        mfem::ElementTransformation &Tr,
+                                        mfem::Vector &elvect);
+
+    virtual void AssembleRHSElementVect(const mfem::FiniteElement &el,
+                                        mfem::FaceElementTransformations &Tr,
+                                        mfem::Vector &elvect);
+};
+
 class ND_NitscheIntegrator : public mfem::BilinearFormIntegrator
 {
 protected:
