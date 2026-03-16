@@ -25,7 +25,7 @@ int runGMRES(const mfem::Operator& A,
              const int restart = 100,
              const int max_iter = 1000)
 {
-    mfem::GMRESSolver gmres;
+    mfem::FGMRESSolver gmres;
     gmres.SetOperator(A);
     gmres.SetPreconditioner(P);
     gmres.SetAbsTol(1e-12);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
     std::string mesh_file, output_file, cycle_str;
     int max_refinements, nev, n_gmres;
-    double gmres_tol, eval_tol, penalty;
+    double gmres_tol, eval_tol, penalty, tau;
     bool verbose;
 
     // Parse command line options
@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
         ("mesh,m", po::value<std::string>(&mesh_file)->required(), "mesh filename")
         ("refinements,r", po::value<int>(&max_refinements)->required(), "number of refinements")
         ("output,o", po::value<std::string>(&output_file)->default_value("out.csv"), "output csv filename")
+        ("tau,t", po::value<double>(&tau)->default_value(0.0), "time-stepping parameter (tau)")
         ("penalty,p", po::value<double>(&penalty)->default_value(10.0), "Nitsche penalty parameter")
         ("nev,n", po::value<int>(&nev)->default_value(1), "number of eigenvalues (0 to skip)")
         ("gmres,g", po::value<int>(&n_gmres)->default_value(1), "number of GMRES runs")
@@ -103,9 +104,9 @@ int main(int argc, char* argv[])
 
     auto mesh_ptr = std::make_shared<mfem::Mesh>(mesh_file.c_str(), 1, 1);
 
-    // Initialize Multigrid with the penalty from command line
+    // Initialize Multigrid with tau and penalty from command line
     StokesNitsche::StokesMG mg(
-      mesh_ptr, theta, penalty, factor,
+      mesh_ptr, tau, theta, penalty, factor,
       StokesNitsche::MassLumping::Diagonal,
       StokesNitsche::SmootherType::GaussSeidelForw
     );
@@ -134,6 +135,7 @@ int main(int argc, char* argv[])
     {
         std::cout << std::string(75, '=') << "\n";
         std::cout << "Mesh: " << mesh_file << "\n";
+        std::cout << "Tau: " << tau << "\n";
         std::cout << "Penalty: " << penalty << "\n";
         std::cout << "Refinements: " << max_refinements << "\n";
         std::cout << std::string(75, '=') << "\n";

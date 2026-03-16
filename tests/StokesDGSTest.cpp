@@ -16,8 +16,9 @@ void testResidualComp(const unsigned n,
         mfem::Mesh::MakeCartesian3D(n, n, n, el_type)
     );
 
+    // Added tau = 0.0
     auto op_ptr = std::make_shared<StokesNitsche::StokesNitscheOperator>(
-        mesh_ptr, p, theta, penalty, factor
+        mesh_ptr, 0.0, p, theta, penalty, factor
     );
 
     op_ptr->setOperatorMode(StokesNitsche::OperatorMode::DEC);
@@ -79,8 +80,9 @@ void testConvergence(const unsigned n,
         mfem::Mesh::MakeCartesian3D(n, n, n, el_type)
     );
 
+    // Added tau = 0.0
     auto op_ptr = std::make_shared<StokesNitsche::StokesNitscheOperator>(
-        mesh_ptr, p, theta, penalty, factor
+        mesh_ptr, 0.0, p, theta, penalty, factor
     );
 
     op_ptr->setOperatorMode(StokesNitsche::OperatorMode::DEC);
@@ -99,7 +101,6 @@ void testConvergence(const unsigned n,
                  residual(nv + ne);
 
     sol.Randomize(1);
-    // op_ptr->eliminateConstants(sol);
     op_ptr->Mult(sol, rhs);
 
     mfem::Vector rhs_extended(nv + ne + 1),
@@ -128,8 +129,6 @@ void testConvergence(const unsigned n,
 
     for (iter = 0; iter < maxit && err > tol; ++iter)
     {
-        // op_ptr->eliminateConstants(sol_dgs);
-
         residual_dgs = rhs;
         op_ptr->AddMult(sol_dgs, residual_dgs, -1.0);
         ASSERT_EQ(residual_dgs.CheckFinite(), 0) << "Failed at order " << p << std::endl;
@@ -170,12 +169,3 @@ TEST(StokesDGSTest, ConvergenceTetra)
         testConvergence(3, p, mfem::Element::TETRAHEDRON, 10 * p * p);
     }
 }
-
-// TEST(StokesDGSTest, ConvergenceHex)
-// {
-//     for(unsigned p = 1; p <= 3; ++p)
-//     {
-//         std::cout << "Order " << p << std::endl;
-//         testConvergence(3, p, mfem::Element::HEXAHEDRON, 10 * p * p);
-//     }
-// }

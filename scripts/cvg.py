@@ -5,6 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 import argparse
 import numpy as np
+import itertools
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ==============================================================================
@@ -13,17 +14,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 EXECUTABLE = "../release/mgconvergence"
 MESH_FOLDER = "../meshes"
 OUTPUT_FOLDER = "out"
-PLOT_FOLDER = "plots"  # New directory for plots
+PLOT_FOLDER = "plots"
 
-NUM_JOBS = 4  # Number of parallel jobs
+NUM_JOBS = 6  # Number of parallel jobs
 
 # Default number of refinements for all meshes
 DEFAULT_REFINEMENTS = 4
 
-# Penalty Range Configuration
-PENALTY_MIN = 10.0
-PENALTY_MAX = 40.0
-PENALTY_STEPS = 4
+# Penalty Configuration
+PENALTY_VALUES = [10.0, 20.0, 30.0, 40.0]
+
+# Time-stepping (Tau) Configuration
+TAU_VALUES = [0.0, 10.0, 100.0, 1000.0]
 
 # Mesh configuration: Using the default for all
 MESH_CONFIG = {
@@ -41,206 +43,301 @@ EW_TOL = 1e-3
 GMRES_TOL = 1e-6
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Run StokesMG penalty sensitivity study.")
+    parser = argparse.ArgumentParser(description="Run StokesMG penalty and tau sensitivity study.")
     parser.add_argument('--rerun', action='store_true', help="Force re-run of all simulations.")
-    parser.add_argument('--plot-only', action='store_true', help="Only plot existing CSVs.")
+    parser.add_argument('--plot-only', action='store_true', help="Only plot existing data without running.")
     return parser.parse_args()
 
-def run_single_job(cmd, mesh_filename, cycle, p_val):
-    """Helper function to run a single C++ execution."""
-    print(f"[RUNNING] {mesh_filename} | Cycle: {cycle} | Penalty: {p_val}")
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        print(f"[DONE]    {mesh_filename} | Cycle: {cycle} | Penalty: {p_val}")
-    except subprocess.CalledProcessError as e:
-        print(f"[FAIL]    {mesh_filename} | Cycle: {cycle} | Penalty: {p_val}")
-        print(f"          Error Output: {e.stderr.strip()}")
+def purge_old_files():
+    """Deletes existing CSVs in the output folder and PDFs in the plots folder."""
+    print("Automatically purging old files...")
+    
+    csv_files = glob.glob(os.path.join(OUTPUT_FOLDER, "*.csv"))
+    for f in csv_files:
+        try: os.remove(f)
+        except OSError as e: print(f"Error deleting {f}: {e}")
+            
+    pdf_files = glob.glob(os.path.join(PLOT_FOLDER, "*.pdf"))
+    for f in pdf_files:
+        try: os.remove(f)
+        except OSError as e: print(f"Error deleting {f}: {e}")
+            
+    print(f"Purged {len(csv_files)} CSV files and {len(pdf_files)} PDF plots.\n")
 
-def read_csv_as_dict(filepath):
-    """Reads a CSV into a dictionary of numpy arrays (pandas replacement)."""
+def run_job(cmd, out_file, rerun):
+    if not rerun and os.path.exists(out_file):
+        print(f"Skipping {os.path.basename(out_file)}, already exists.")
+        return True
+    
+    print(f"Running: {' '.join(cmd)}")
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Job failed: {' '.join(cmd)}\n{e}")
+        return False
+
+def read_csv(filepath):
+    data = {}
     with open(filepath, 'r') as f:
         reader = csv.DictReader(f)
-        if not reader.fieldnames:
-            return {}
-
-        data = {field: [] for field in reader.fieldnames}
         for row in reader:
-            for field in reader.fieldnames:
-                val = row[field].strip()
-                if val == '' or val.lower() == 'nan':
-                    data[field].append(np.nan)
-                else:
-                    data[field].append(float(val))
+            for key, val in row.items():
+                if key not in data: data[key] = []
+                data[key].append(float(val) if val != 'NaN' else np.nan)
+    for key in data:
+        data[key] = np.array(data[key])
+    return data
 
-    return {k: np.array(v) for k, v in data.items()}
-
-def run_study():
+def main():
     args = parse_arguments()
 
-    # Create necessary directories
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     os.makedirs(PLOT_FOLDER, exist_ok=True)
 
-    if args.rerun:
-        print(f"(!) Emptying '{OUTPUT_FOLDER}' and '{PLOT_FOLDER}'...")
-        for folder in [OUTPUT_FOLDER, PLOT_FOLDER]:
-            for f in glob.glob(os.path.join(folder, "*")):
-                try:
-                    os.remove(f)
-                except Exception:
-                    pass
+    if not args.plot_only:
+        purge_old_files()
 
-    mesh_files = glob.glob(os.path.join(MESH_FOLDER, "*.msh")) + glob.glob(os.path.join(MESH_FOLDER, "*.mesh"))
-    penalties = np.linspace(PENALTY_MIN, PENALTY_MAX, PENALTY_STEPS)
-    cycles = ['V', 'W']
+    jobs = []
 
-    # 1. Build job list
-    jobs_to_run = []
-    for p in penalties:
-        p_val = round(p, 2)
-        for cycle in cycles:
-            for mesh_path in mesh_files:
-                mesh_filename = os.path.basename(mesh_path)
-                mesh_name_no_ext = os.path.splitext(mesh_filename)[0]
-
-                if mesh_filename not in MESH_CONFIG:
-                    continue
-
-                refinements = MESH_CONFIG[mesh_filename]
-                csv_path = os.path.join(OUTPUT_FOLDER, f"{mesh_name_no_ext}_{cycle}_p{p_val}.csv")
-
-                if not args.plot_only:
-                    if not os.path.exists(csv_path) or args.rerun:
-                        cmd = [
-                            EXECUTABLE, "--mesh", mesh_path, "--refinements", str(refinements),
-                            "--output", csv_path, "--nev", str(NEV), "--gmres", str(GMRES_RUNS),
-                            "--eval_tol", str(EW_TOL), "--gmres_tol", str(GMRES_TOL),
-                            "--cycle", cycle, "--penalty", str(p_val)
-                        ]
-                        jobs_to_run.append((cmd, mesh_filename, cycle, p_val))
-
-    # 2. Parallel Execution
-    if jobs_to_run:
-        print(f"\nDispatching {len(jobs_to_run)} jobs across {NUM_JOBS} workers...\n" + "="*60)
-        with ThreadPoolExecutor(max_workers=NUM_JOBS) as executor:
-            futures = [executor.submit(run_single_job, *job) for job in jobs_to_run]
-            for future in as_completed(futures):
-                future.result()
-        print("="*60 + "\nAll jobs completed.\n")
-    else:
-        print("No new simulations to run. Moving to plotting step...")
-
-    # 3. Read results
-    all_results = {}
-    for p in penalties:
-        p_val = round(p, 2)
-        all_results[p_val] = {'V': {}, 'W': {}}
-        for cycle in cycles:
-            for mesh_path in mesh_files:
-                mesh_filename = os.path.basename(mesh_path)
-                mesh_name_no_ext = os.path.splitext(mesh_filename)[0]
-
-                if mesh_filename not in MESH_CONFIG:
-                    continue
-
-                csv_path = os.path.join(OUTPUT_FOLDER, f"{mesh_name_no_ext}_{cycle}_p{p_val}.csv")
-                if os.path.exists(csv_path):
-                    all_results[p_val][cycle][mesh_name_no_ext] = read_csv_as_dict(csv_path)
-
-    # 4. Plotting
-    if all_results:
-        plot_dof_convergence_for_penalty(all_results, cycles, round(PENALTY_MIN, 2))
-        plot_penalty_per_mesh_refinements(all_results, cycles, penalties)
-
-def plot_dof_convergence_for_penalty(all_results, cycles, target_penalty):
-    if target_penalty not in all_results:
-        return
-
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    colors = plt.cm.tab10.colors
-    fig.suptitle(f"Convergence Rates (Penalty = {target_penalty})", fontsize=16)
-
-    for row_idx, cycle in enumerate(cycles):
-        results = all_results[target_penalty][cycle]
-        ax_conv, ax_gmres = axes[row_idx, 0], axes[row_idx, 1]
-
-        for i, (name, df) in enumerate(results.items()):
-            if not df: continue
-            color = colors[i % len(colors)]
-            target_col = 'AbsEval1' if 'AbsEval1' in df else 'AbsEval0'
-
-            mask = ~np.isnan(df[target_col])
-            dofs_clean = df['DOFs'][mask]
-            evals_clean = df[target_col][mask]
-
-            if len(dofs_clean) > 0:
-                ax_conv.plot(dofs_clean, evals_clean, marker='o', label=name, color=color)
-            if 'AvgGMRES' in df and len(df['AvgGMRES']) > 0:
-                ax_gmres.plot(df['DOFs'], df['AvgGMRES'], marker='s', linestyle='--', label=name, color=color)
-
-        ax_conv.set_title(f"{cycle}-Cycle Convergence Factor")
-        ax_conv.set_ylabel(r"Largest Error Eigenvalue $|\lambda|_{max}$")
-        ax_gmres.set_title(f"{cycle}-Cycle GMRES Iterations")
-        ax_gmres.set_ylabel("Avg Iterations")
-
-        for ax in [ax_conv, ax_gmres]:
-            ax.set_xlabel("DOFs")
-            ax.set_xscale('log')
-            ax.grid(True, alpha=0.3)
-            ax.legend()
-
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.92)
-    # Save to PLOT_FOLDER
-    plt.savefig(os.path.join(PLOT_FOLDER, f"mesh_comparison_p{target_penalty}.pdf"))
-    plt.close(fig)
-
-def plot_penalty_per_mesh_refinements(all_results, cycles, penalties):
-    sample_p = list(all_results.keys())[0]
-    mesh_names = list(all_results[sample_p]['V'].keys())
-
-    for mesh_name in mesh_names:
-        fig, axes = plt.subplots(len(cycles), 2, figsize=(14, 6 * len(cycles)))
-        fig.suptitle(f"Penalty Parameter Sensitivity - Mesh: {mesh_name}", fontsize=16)
-
-        for row_idx, cycle in enumerate(cycles):
-            ax_conv, ax_gmres = axes[row_idx, 0], axes[row_idx, 1]
-            sample_df = all_results[sample_p][cycle].get(mesh_name)
-            if not sample_df: continue
-
-            ref_levels = np.unique(sample_df['Refinements'])
-            colors = plt.cm.viridis(np.linspace(0, 1, len(ref_levels)))
-
-            for i, ref in enumerate(ref_levels):
-                p_plot, conv_plot, gmres_plot = [], [], []
-                for p in penalties:
+    # 1. Setup Jobs
+    for tau in TAU_VALUES:
+        for p in PENALTY_VALUES:
+            for cycle in ['V']:
+                for mesh_file, refs in MESH_CONFIG.items():
+                    mesh_path = os.path.join(MESH_FOLDER, mesh_file)
+                    mesh_name = os.path.basename(mesh_file)
+                    
+                    if not os.path.exists(mesh_path): continue
+                    
                     p_val = round(p, 2)
-                    if mesh_name in all_results[p_val][cycle]:
-                        df = all_results[p_val][cycle][mesh_name]
+                    out_file = os.path.join(OUTPUT_FOLDER, f"out_{mesh_name}_tau_{tau}_p_{p_val}_{cycle}.csv")
+                    cmd = [
+                        EXECUTABLE,
+                        "--mesh", mesh_path,
+                        "--refinements", str(refs),
+                        "--output", out_file,
+                        "--tau", str(tau),
+                        "--penalty", str(p_val),
+                        "--cycle", cycle,
+                        "--nev", str(NEV),
+                        "--gmres", str(GMRES_RUNS),
+                        "--gmres_tol", str(GMRES_TOL),
+                        "--eval_tol", str(EW_TOL)
+                    ]
+                    jobs.append((cmd, out_file))
+
+    # 2. Execute Jobs
+    if not args.plot_only:
+        with ThreadPoolExecutor(max_workers=NUM_JOBS) as executor:
+            futures = [executor.submit(run_job, cmd, out_file, True) for cmd, out_file in jobs]
+            for future in as_completed(futures): future.result()
+
+    # 3. Read Results
+    all_results = {t: {round(p, 2): {'V': {}, 'W': {}} for p in PENALTY_VALUES} for t in TAU_VALUES}
+    
+    for tau in TAU_VALUES:
+        for p in PENALTY_VALUES:
+            p_val = round(p, 2)
+            for cycle in ['V', 'W']:
+                for mesh_file in MESH_CONFIG.keys():
+                    mesh_name = os.path.basename(mesh_file)
+                    out_file = os.path.join(OUTPUT_FOLDER, f"out_{mesh_name}_tau_{tau}_p_{p_val}_{cycle}.csv")
+                    if os.path.exists(out_file):
+                        all_results[tau][p_val][cycle][mesh_name] = read_csv(out_file)
+
+    # Calculate extremes
+    tau_ext = list(dict.fromkeys([TAU_VALUES[0], TAU_VALUES[-1]]))
+    pen_ext = list(dict.fromkeys([PENALTY_VALUES[0], PENALTY_VALUES[-1]]))
+    extremes_combos = list(itertools.product(tau_ext, pen_ext))
+
+    # 4. Plot Results
+    for mesh_file in MESH_CONFIG.keys():
+        mesh_name = os.path.basename(mesh_file)
+        max_ref = MESH_CONFIG[mesh_file]
+        
+        for cycle in ['V', 'W']:
+            has_data = any(mesh_name in all_results[t][round(p, 2)][cycle] for t in TAU_VALUES for p in PENALTY_VALUES)
+            if not has_data: continue
+
+            # ==================================================================
+            # PLOT A: 2x2 Summary Plot
+            # ==================================================================
+            fig, axes = plt.subplots(2, 2, figsize=(15, 11))
+            fig.suptitle(rf"Mesh: {mesh_name} | Cycle: {cycle}", fontsize=18)
+
+            ax_ref_cvg = axes[0, 0]
+            ax_ref_gmres = axes[0, 1]
+            ax_pen_sens = axes[1, 0]
+            ax_tau_sens = axes[1, 1]
+            
+            # Twin axes for sensitivity plots
+            ax_pen_sens_gmres = ax_pen_sens.twinx()
+            ax_tau_sens_gmres = ax_tau_sens.twinx()
+
+            colors_top = plt.cm.tab10(np.linspace(0, 1, max(1, len(extremes_combos))))
+            colors_bot = plt.cm.Set1(np.linspace(0, 1, max(1, max(len(tau_ext), len(pen_ext)))))
+
+            # --- Top-Left & Top-Right: Refinements vs CVG and GMRES (Extreme Combos) ---
+            for idx, (t, p) in enumerate(extremes_combos):
+                p_val = round(p, 2)
+                refs_plot, cvg_plot, gmres_plot = [], [], []
+                if mesh_name in all_results[t][p_val][cycle]:
+                    df = all_results[t][p_val][cycle][mesh_name]
+                    for ref in range(1, max_ref + 1):
                         mask = df['Refinements'] == ref
+                        if np.any(mask):
+                            refs_plot.append(ref)
+                            target_col = 'AbsEval1' if 'AbsEval1' in df else 'AbsEval0'
+                            cvg_plot.append(df[target_col][mask][0])
+                            gmres_plot.append(df['AvgGMRES'][mask][0])
+
+                if refs_plot:
+                    label = rf"$\tau$={t}, $C_w$={p_val}"
+                    ls = '-' if idx < len(extremes_combos)/2 else '--'
+                    ax_ref_cvg.plot(refs_plot, cvg_plot, marker='o', color=colors_top[idx], linestyle=ls, label=label)
+                    ax_ref_gmres.plot(refs_plot, gmres_plot, marker='s', color=colors_top[idx], linestyle=ls, label=label)
+
+            ax_ref_cvg.set_title("Convergence vs Refinements (Parameter Extremes)")
+            ax_ref_cvg.set_xlabel("Number of Refinements")
+            ax_ref_cvg.set_ylabel("Max Eigenvalue")
+            ax_ref_cvg.set_xticks(range(1, max_ref + 1))
+            ax_ref_cvg.grid(True, alpha=0.4)
+            if ax_ref_cvg.has_data(): ax_ref_cvg.legend(loc='best')
+
+            ax_ref_gmres.set_title("GMRES Iterations vs Refinements (Parameter Extremes)")
+            ax_ref_gmres.set_xlabel("Number of Refinements")
+            ax_ref_gmres.set_ylabel("Avg GMRES Iterations")
+            ax_ref_gmres.set_xticks(range(1, max_ref + 1))
+            ax_ref_gmres.grid(True, alpha=0.4)
+            if ax_ref_gmres.has_data(): ax_ref_gmres.legend(loc='best')
+
+            # --- Bottom-Left: C_w Sensitivity (Extreme Taus, At Max Refinement) with Twin Axis ---
+            for idx, t in enumerate(tau_ext):
+                p_plot, c_plot, g_plot = [], [], []
+                for p in PENALTY_VALUES:
+                    p_val = round(p, 2)
+                    if mesh_name in all_results[t][p_val][cycle]:
+                        df = all_results[t][p_val][cycle][mesh_name]
+                        mask = df['Refinements'] == max_ref
                         if np.any(mask):
                             p_plot.append(p_val)
                             target_col = 'AbsEval1' if 'AbsEval1' in df else 'AbsEval0'
-                            conv_plot.append(df[target_col][mask][0])
-                            gmres_plot.append(df['AvgGMRES'][mask][0])
-
+                            c_plot.append(df[target_col][mask][0])
+                            g_plot.append(df['AvgGMRES'][mask][0])
                 if p_plot:
-                    ax_conv.plot(p_plot, conv_plot, marker='o', label=f"Refinement {int(ref)}", color=colors[i])
-                    ax_gmres.plot(p_plot, gmres_plot, marker='s', linestyle='--', label=f"Refinement {int(ref)}", color=colors[i])
+                    ax_pen_sens.plot(p_plot, c_plot, marker='o', linestyle='-', color=colors_bot[idx], label=rf"$\tau$={t} (Eig)")
+                    ax_pen_sens_gmres.plot(p_plot, g_plot, marker='x', linestyle='--', color=colors_bot[idx], label=rf"$\tau$={t} (GMRES)")
 
-            ax_conv.set_title(f"{cycle}-Cycle: Max Eigenvalue vs. Penalty")
-            ax_gmres.set_title(f"{cycle}-Cycle: GMRES Iterations vs. Penalty")
+            ax_pen_sens.set_title(rf"$C_w$ Sensitivity (at ref = {max_ref})")
+            ax_pen_sens.set_xlabel(rf"$C_w$")
+            ax_pen_sens.set_ylabel("Max Eigenvalue")
+            ax_pen_sens_gmres.set_ylabel("Avg GMRES Iterations")
+            ax_pen_sens.grid(True, alpha=0.4)
+            
+            # Combine legends for Bottom-Left
+            lines_1, labels_1 = ax_pen_sens.get_legend_handles_labels()
+            lines_2, labels_2 = ax_pen_sens_gmres.get_legend_handles_labels()
+            if lines_1 or lines_2:
+                ax_pen_sens.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best', fontsize=9)
 
-            for ax in [ax_conv, ax_gmres]:
-                ax.set_xlabel("Penalty Parameter")
-                ax.grid(True, alpha=0.3)
-                if ax.has_data(): ax.legend()
+            # --- Bottom-Right: Tau Sensitivity (Extreme Penalties, At Max Refinement) with Twin Axis ---
+            for idx, p in enumerate(pen_ext):
+                p_val = round(p, 2)
+                t_plot, c_plot, g_plot = [], [], []
+                for t in TAU_VALUES:
+                    if mesh_name in all_results[t][p_val][cycle]:
+                        df = all_results[t][p_val][cycle][mesh_name]
+                        mask = df['Refinements'] == max_ref
+                        if np.any(mask):
+                            t_plot.append(t)
+                            target_col = 'AbsEval1' if 'AbsEval1' in df else 'AbsEval0'
+                            c_plot.append(df[target_col][mask][0])
+                            g_plot.append(df['AvgGMRES'][mask][0])
+                if t_plot:
+                    t_strs = [str(x) for x in t_plot]
+                    ax_tau_sens.plot(t_strs, c_plot, marker='o', linestyle='-', color=colors_bot[idx], label=rf"$C_w$={p_val} (Eig)")
+                    ax_tau_sens_gmres.plot(t_strs, g_plot, marker='x', linestyle='--', color=colors_bot[idx], label=rf"$C_w$={p_val} (GMRES)")
 
-        plt.tight_layout()
-        plt.subplots_adjust(top=0.92)
-        # Save to PLOT_FOLDER
-        plt.savefig(os.path.join(PLOT_FOLDER, f"penalty_sensitivity_{mesh_name}.pdf"))
-        plt.close(fig)
+            ax_tau_sens.set_title(rf"$\tau$ Sensitivity (at ref = {max_ref})")
+            ax_tau_sens.set_xlabel(rf"$\tau$")
+            ax_tau_sens.set_ylabel("Max Eigenvalue")
+            ax_tau_sens_gmres.set_ylabel("Avg GMRES Iterations")
+            ax_tau_sens.grid(True, alpha=0.4)
+            
+            # Combine legends for Bottom-Right
+            lines_3, labels_3 = ax_tau_sens.get_legend_handles_labels()
+            lines_4, labels_4 = ax_tau_sens_gmres.get_legend_handles_labels()
+            if lines_3 or lines_4:
+                ax_tau_sens.legend(lines_3 + lines_4, labels_3 + labels_4, loc='best', fontsize=9)
+
+            plt.tight_layout()
+            plt.subplots_adjust(top=0.92)
+            summary_plot_file = os.path.join(PLOT_FOLDER, f"{mesh_name}_{cycle}_summary.pdf")
+            plt.savefig(summary_plot_file, bbox_inches='tight')
+            plt.close(fig)
+
+            # ==================================================================
+            # PLOT B: Heatmaps showing dependence on BOTH Tau and Penalty
+            # ==================================================================
+            fig_hm, axes_hm = plt.subplots(1, 2, figsize=(16, 7))
+            fig_hm.suptitle(rf"Convergence Heatmaps (Mesh: {mesh_name} | {cycle}-Cycle)" + "\n" + f"At Maximum Refinement ({max_ref})", fontsize=16)
+
+            Z_eig = np.full((len(PENALTY_VALUES), len(TAU_VALUES)), np.nan)
+            Z_gmres = np.full((len(PENALTY_VALUES), len(TAU_VALUES)), np.nan)
+
+            for i_p, p in enumerate(PENALTY_VALUES):
+                p_val = round(p, 2)
+                for i_t, t in enumerate(TAU_VALUES):
+                    if mesh_name in all_results[t][p_val][cycle]:
+                        df = all_results[t][p_val][cycle][mesh_name]
+                        mask = df['Refinements'] == max_ref
+                        if np.any(mask):
+                            target_col = 'AbsEval1' if 'AbsEval1' in df else 'AbsEval0'
+                            Z_eig[i_p, i_t] = df[target_col][mask][0]
+                            Z_gmres[i_p, i_t] = df['AvgGMRES'][mask][0]
+
+            def plot_single_heatmap(ax, Z_data, title, val_fmt):
+                if np.all(np.isnan(Z_data)):
+                    ax.set_visible(False)
+                    return
+
+                cmap = 'viridis_r'
+                cax = ax.imshow(Z_data, origin='lower', aspect='auto', cmap=cmap)
+                fig_hm.colorbar(cax, ax=ax, label=title)
+
+                ax.set_xticks(np.arange(len(TAU_VALUES)))
+                ax.set_xticklabels([str(t) for t in TAU_VALUES])
+                ax.set_yticks(np.arange(len(PENALTY_VALUES)))
+                ax.set_yticklabels([str(p) for p in PENALTY_VALUES])
+
+                ax.set_xlabel(rf"$\tau$", fontsize=12)
+                ax.set_ylabel(rf"$C_w$", fontsize=12)
+                ax.set_title(title, fontsize=14)
+
+                vmin = np.nanmin(Z_data)
+                vmax = np.nanmax(Z_data)
+
+                for i_p in range(len(PENALTY_VALUES)):
+                    for i_t in range(len(TAU_VALUES)):
+                        val = Z_data[i_p, i_t]
+                        if not np.isnan(val):
+                            norm_val = (val - vmin) / (vmax - vmin) if vmax > vmin else 0.5
+                            text_col = "white" if norm_val > 0.5 else "black"
+                            fmt_str = f"{{:{val_fmt}}}"
+                            ax.text(i_t, i_p, fmt_str.format(val), ha="center", va="center", 
+                                    color=text_col, fontweight='bold', fontsize=11)
+
+            plot_single_heatmap(axes_hm[0], Z_eig, 'Max Eigenvalue (Convergence Rate)', '.3f')
+            plot_single_heatmap(axes_hm[1], Z_gmres, 'Avg GMRES Iterations', '.1f')
+
+            plt.tight_layout()
+            plt.subplots_adjust(top=0.88)
+            heatmap_plot_file = os.path.join(PLOT_FOLDER, f"{mesh_name}_{cycle}_heatmap.pdf")
+            plt.savefig(heatmap_plot_file, bbox_inches='tight')
+            plt.close(fig_hm)
+
+    print(f"All done! PDF plots are saved in the '{PLOT_FOLDER}' directory.")
 
 if __name__ == "__main__":
-    run_study()
+    main()

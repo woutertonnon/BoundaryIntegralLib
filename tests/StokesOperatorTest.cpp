@@ -20,7 +20,8 @@ TEST(StokesOperatorTest, MatrixRegularityGalerkinP1)
         std::make_unique<mfem::Mesh>(
             std::move(mesh)
         );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor);
 
     ASSERT_EQ(op.getOperatorMode(), OperatorMode::Galerkin);
@@ -56,7 +57,8 @@ TEST(StokesOperatorTest, MatrixRegularityDECP1)
         std::make_unique<mfem::Mesh>(
             std::move(mesh)
         );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor,
                              MassLumping::Diagonal);
 
@@ -95,7 +97,8 @@ TEST(StokesOperatorTest, MatrixRegularityGalerkinP2)
     std::make_unique<mfem::Mesh>(
         std::move(mesh)
     );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor);
 
     ASSERT_EQ(op.getOperatorMode(), OperatorMode::Galerkin);
@@ -131,7 +134,8 @@ TEST(StokesOperatorTest, MatrixRegularityDECP2)
     std::make_unique<mfem::Mesh>(
         std::move(mesh)
     );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor,
                              MassLumping::Diagonal);
 
@@ -169,7 +173,8 @@ TEST(StokesOperatorTest, OperatorGalerkinP1)
         std::make_unique<mfem::Mesh>(
             std::move(mesh)
         );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor);
 
     const int nv = op.getH1Space().GetNDofs(),
@@ -185,14 +190,12 @@ TEST(StokesOperatorTest, OperatorGalerkinP1)
     x_(nv + ne) = 0;
     mfem::Vector x(x_, 0, nv + ne);
     x.Randomize(1);
-    // op.eliminateConstants(x);
 
     op.Mult(x, y_op);
 
     mfem::Vector y_extended(ne + nv + 1);
     A->Mult(x_, y_extended);
 
-    // ASSERT_NEAR(y_extended(ne + nv), 0, 1e-12);
     y_mat.MakeRef(y_extended, 0, ne + nv);
 
     mfem::Vector y_err(y_mat);
@@ -216,7 +219,8 @@ TEST(StokesOperatorTest, OperatorDECP1)
         std::make_unique<mfem::Mesh>(
             std::move(mesh)
         );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor,
                              MassLumping::Diagonal);
     op.setOperatorMode(StokesNitsche::OperatorMode::DEC);
@@ -234,14 +238,12 @@ TEST(StokesOperatorTest, OperatorDECP1)
     x_(nv + ne) = 0;
     mfem::Vector x(x_, 0, nv + ne);
     x.Randomize(1);
-    // op.eliminateConstants(x);
 
     op.Mult(x, y_op);
 
     mfem::Vector y_extended(ne + nv + 1);
     A->Mult(x_, y_extended);
 
-    // ASSERT_NEAR(y_extended(ne + nv), 0, 1e-12);
     y_mat.MakeRef(y_extended, 0, ne + nv);
 
     mfem::Vector y_err(y_mat);
@@ -265,7 +267,8 @@ TEST(StokesOperatorTest, OperatorGalerkinP2)
     std::make_unique<mfem::Mesh>(
         std::move(mesh)
     );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor);
 
     const int nv = op.getH1Space().GetNDofs(),
@@ -281,14 +284,12 @@ TEST(StokesOperatorTest, OperatorGalerkinP2)
                  x_(nv + ne) = 0;
     mfem::Vector x(x_, 0, nv + ne);
     x.Randomize(1);
-    // op.eliminateConstants(x);
 
     op.Mult(x, y_op);
 
     mfem::Vector y_extended(ne + nv + 1);
     A->Mult(x_, y_extended);
 
-    // ASSERT_NEAR(y_extended(ne + nv), 0, 1e-12);
     y_mat.MakeRef(y_extended, 0, ne + nv);
 
     mfem::Vector y_err(y_mat);
@@ -312,7 +313,8 @@ TEST(StokesOperatorTest, OperatorDECP2)
     std::make_unique<mfem::Mesh>(
         std::move(mesh)
     );
-    StokesNitscheOperator op(mesh_ptr, p,
+    // Added tau = 0.0
+    StokesNitscheOperator op(mesh_ptr, 0.0, p,
                              theta, penalty, factor,
                              MassLumping::Diagonal);
     op.setOperatorMode(StokesNitsche::OperatorMode::DEC);
@@ -330,14 +332,12 @@ TEST(StokesOperatorTest, OperatorDECP2)
                  x_(nv + ne) = 0;
     mfem::Vector x(x_, 0, nv + ne);
     x.Randomize(1);
-    // op.eliminateConstants(x);
 
     op.Mult(x, y_op);
 
     mfem::Vector y_extended(ne + nv + 1);
     A->Mult(x_, y_extended);
 
-    // ASSERT_NEAR(y_extended(ne + nv), 0, 1e-12);
     y_mat.MakeRef(y_extended, 0, ne + nv);
 
     mfem::Vector y_err(y_mat);

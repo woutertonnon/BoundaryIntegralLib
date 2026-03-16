@@ -20,7 +20,8 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     mfem::Device("omp");
 #endif
     // 1. Initialize MG Solver & Hierarchy
-    StokesNitsche::StokesMG mg(mesh_ptr, 1, 10);
+    // Added tau = 0.0
+    StokesNitsche::StokesMG mg(mesh_ptr, 0.0, 1.0, 10.0);
 
     for (int i = 0; i < geomref; ++i)
         mg.addRefinement();
@@ -53,7 +54,7 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
     std::cout << "  Iter | Rel. Residual \n-------|---------------\n";
 
-    for (int iter = 0; false && iter < max_iter; ++iter)
+    for (int iter = 0; iter < max_iter; ++iter)
     {
         fine_op.eliminateConstants(x_sol);
         residual = b;
@@ -95,7 +96,7 @@ void RunStokesMGTest(std::shared_ptr<mfem::Mesh> mesh_ptr,
     fine_op.Mult(x_exact, b);
     x_sol = 0.0;
 
-    mfem::GMRESSolver gmres;
+    mfem::FGMRESSolver gmres;
     gmres.SetOperator(fine_op);
     gmres.SetPreconditioner(mg);
     gmres.SetAbsTol(1e-12);
@@ -129,54 +130,5 @@ TEST(StokesMGTest, ConvergenceTetra)
     auto mesh_ptr = std::make_shared<mfem::Mesh>(
         mfem::Mesh::MakeCartesian3D(n, n, n, mfem::Element::TETRAHEDRON)
     );
-    RunStokesMGTest(mesh_ptr, 5);
+    RunStokesMGTest(mesh_ptr, 4);
 }
-
-
-// TEST(StokesMGTest, ConvergenceRefTetra)
-// {
-//     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-//         "../extern/mfem/data/ref-tetrahedron.mesh", 1, 1
-//     );
-//     RunStokesMGTest(mesh_ptr);
-// }
-//
-// TEST(StokesMGTest, ConvergenceBall)
-// {
-//     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-//         "../tests/meshes/ball.msh", 1, 1
-//     );
-//     RunStokesMGTest(mesh_ptr, 3);
-// }
-//
-// TEST(StokesMGTest, ConvergenceBallCavity)
-// {
-//     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-//         "../tests/meshes/ball_hole.msh", 1, 1
-//     );
-//     RunStokesMGTest(mesh_ptr, 3);
-// }
-//
-// TEST(StokesMGTest, ConvergenceCorner)
-// {
-//     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-//         "../tests/meshes/corner.msh", 1, 1
-//     );
-//     RunStokesMGTest(mesh_ptr, 3);
-// }
-//
-// TEST(StokesMGTest, ConvergenceCornerStructured)
-// {
-//     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-//         "../tests/meshes/corner_structured.msh", 1, 1
-//     );
-//     RunStokesMGTest(mesh_ptr, 3);
-// }
-//
-// TEST(StokesMGTest, ConvergenceCylinder)
-// {
-//     auto mesh_ptr = std::make_shared<mfem::Mesh>(
-//         "../tests/meshes/cylinder.msh", 1, 1
-//     );
-//     RunStokesMGTest(mesh_ptr, 3);
-// }

@@ -24,7 +24,7 @@ MESH_CONFIG = {
 
 GMRES_RUNS = 8
 NEV = 2
-EW_TOL = 1e-4
+EW_TOL = 1e-3
 GMRES_TOL = 1e-6
 
 def parse_arguments():

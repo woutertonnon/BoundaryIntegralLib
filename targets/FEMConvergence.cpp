@@ -97,8 +97,9 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
     constexpr double THETA   = 1.0;
     constexpr double PENALTY = 10.0;
     constexpr double FACTOR  = 1.0;
+    constexpr double TAU     = 0.0;
 
-    StokesNitsche::StokesMG mg_solver(mesh_ptr, 
+    StokesNitsche::StokesMG mg_solver(mesh_ptr, TAU,
             THETA, PENALTY, FACTOR,
             StokesNitsche::MassLumping::Diagonal,
             StokesNitsche::SmootherType::Chebyshev
@@ -142,12 +143,13 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
     for (int l = 0; l <= max_refs; ++l)
     {
-        if (l > 0)
-        {
-            mg_solver.removeRefinement();
-            mg_solver.addRefinement();
-        }
-        mg_solver.addRefinement(1);
+        // if (l > 0)
+        // {
+        //     mg_solver.removeRefinement();
+        //     mg_solver.addRefinement();
+        // }
+        // mg_solver.addRefinement(1);
+        mg_solver.addRefinement();
 
 
         StokesNitsche::StokesNitscheOperator& op =
@@ -186,7 +188,7 @@ void RunStokesMGStudy(std::shared_ptr<mfem::Mesh> mesh_ptr,
 
         mfem::Vector x(nu + np + extra_dofs);
         x = 0.0;
-        mfem::GMRESSolver gmres;
+        mfem::FGMRESSolver gmres;
 
         if (DIRECT_SOLVE)
         {

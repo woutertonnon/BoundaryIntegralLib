@@ -1,9 +1,10 @@
 #ifndef STOKES_DGS_HPP
 #define STOKES_DGS_HPP
 
-#include "mfem.hpp"
-#include "StokesOperator.hpp"
 #include <memory>
+
+#include "StokesOperator.hpp"
+#include "mfem.hpp"
 
 namespace StokesNitsche
 {
@@ -18,26 +19,46 @@ enum class SmootherType
 };
 
 /**
- * @brief Distributed Gauss-Seidel (DGS) Preconditioner/Solver for Stokes-Nitsche systems.
- *
- * This class applies a block lower-triangular preconditioner to the transformed
- * Stokes system. It relies on a transformation matrix T to decouple the velocity
- * and pressure updates mathematically.
+ * @brief Lightweight matrix-free operator to apply a scaled identity matrix.
+ * Used to avoid assembling a sparse matrix for the -tau * I block in the transformation.
+ */
+class ScaledIdentityOperator : public mfem::Operator
+{
+private:
+    double scale_;
+public:
+    ScaledIdentityOperator(int size, double scale) 
+        : mfem::Operator(size), scale_(scale) {}
+
+    void Mult(const mfem::Vector& x, mfem::Vector& y) const override
+    {
+        y = x;
+        y *= scale_;
+    }
+};
+
+/**
+ * @brief Distributed Gauss-Seidel (DGS) Preconditioner/Solver for
+ * Stokes-Nitsche systems.
  */
 class StokesNitscheDGS : public mfem::Solver
 {
 public:
-    StokesNitscheDGS(std::shared_ptr<StokesNitscheOperator> op,
-                     const SmootherType type = SmootherType::GaussSeidelForw);
+    StokesNitscheDGS(
+        std::shared_ptr<StokesNitscheOperator> op,
+        const SmootherType type = SmootherType::GaussSeidelForw);
 
     ~StokesNitscheDGS() override = default;
 
-    StokesNitscheDGS(const StokesNitscheDGS&) = delete;
+    StokesNitscheDGS(const StokesNitscheDGS&)            = delete;
     StokesNitscheDGS& operator=(const StokesNitscheDGS&) = delete;
-    StokesNitscheDGS(StokesNitscheDGS&&) = delete;
-    StokesNitscheDGS& operator=(StokesNitscheDGS&&) = delete;
+    StokesNitscheDGS(StokesNitscheDGS&&)                 = delete;
+    StokesNitscheDGS& operator=(StokesNitscheDGS&&)      = delete;
 
     void SetOperator(const mfem::Operator& op) override;
+
+    double getTau() const;
+    void setTau(const double tau);
 
     /**
      * @brief Applies the DGS preconditioner: y = y + B^{-1}(x - A y)
@@ -46,8 +67,8 @@ public:
      */
     void Mult(const mfem::Vector& x, mfem::Vector& y) const override;
 
-    double computeResidualNorm(const mfem::Vector& x,
-                               const mfem::Vector& y) const;
+    double computeResidualNorm(const mfem::Vector& x, const mfem::Vector& y)
+        const;
 
     /**
      * @brief Injects a custom solver for the velocity block (L_u).
@@ -61,18 +82,21 @@ public:
 
 private:
     std::shared_ptr<StokesNitscheOperator> op_;
-    const SmootherType st_;
+    const SmootherType                     st_;
 
     mfem::IdentityOperator id_u_;
 
-    std::unique_ptr<mfem::SparseMatrix> grad_adj_;
-    std::unique_ptr<mfem::SparseMatrix> Lu_;
-    std::unique_ptr<mfem::SparseMatrix> Lp_;
-    std::unique_ptr<mfem::SparseMatrix> bd_;
+    std::unique_ptr<mfem::SparseMatrix>  grad_adj_;
+    std::unique_ptr<mfem::SparseMatrix>  Lu_;
+    std::unique_ptr<mfem::SparseMatrix>  Lp_;
+    std::unique_ptr<mfem::SparseMatrix>  bd_;
     std::unique_ptr<mfem::BlockOperator> T_;
 
-    std::unique_ptr<mfem::Solver> smoother_u_;
-    std::unique_ptr<mfem::Solver> smoother_p_;
+    // Matrix-free operator for the bottom-right block in T_
+    std::unique_ptr<ScaledIdentityOperator> neg_tau_id_p_;
+
+    std::unique_ptr<mfem::Solver>                             smoother_u_;
+    std::unique_ptr<mfem::Solver>                             smoother_p_;
     std::unique_ptr<mfem::BlockLowerTriangularPreconditioner> block_prec_;
 
     mutable mfem::Vector residual_;
@@ -88,6 +112,6 @@ private:
     void distributeCorrection(mfem::Vector& y) const;
 };
 
-} // namespace StokesNitsche
+}  // namespace StokesNitsche
 
 #endif
