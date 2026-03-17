@@ -46,7 +46,7 @@ int runGMRES(const mfem::Operator& A,
 
     if (!gmres.GetConverged())
     {
-        std::cerr << "Warning: GMRES failed to converge.\n";
+	throw std::runtime_error("GMRES did not converge!");
         return max_iter;
     }
 
