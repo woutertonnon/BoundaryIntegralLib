@@ -44,6 +44,12 @@ NEV = 2
 EW_TOL = 1e-3
 GMRES_TOL = 1e-6
 
+# ==============================================================================
+# Plotting Bounds (to ignore diverging outliers)
+# ==============================================================================
+MAX_EIG_PLOT = 1.2     # Cap Eigenvalue plots at 1.2 (since >1 means divergence)
+MAX_GMRES_PLOT = 100   # Cap GMRES plots at 100 iterations
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run StokesMG penalty and tau sensitivity study.")
     parser.add_argument('--rerun', action='store_true', help="Force re-run of all simulations.")
@@ -90,6 +96,35 @@ def read_csv(filepath):
     for key in data:
         data[key] = np.array(data[key])
     return data
+
+def plot_capped_line(ax, x_data, y_data, max_val, base_label, **kwargs):
+    """
+    Plots the line, caps at max_val. 
+    If capped, appends the true max value to the legend label and overlays an upward triangle.
+    """
+    y_data = np.array(y_data)
+    y_capped = np.minimum(y_data, max_val)
+    
+    # Check if any point exceeds the cap
+    max_true = np.max(y_data)
+    if max_true > max_val:
+        # Format for legend: 2 decimals for Eigenvalues, integer for GMRES
+        val_str = f"{max_true:.2f}" if max_val < 10 else f"{int(max_true)}"
+        final_label = f"{base_label} [max: {val_str}]"
+    else:
+        final_label = base_label
+        
+    # Plot the main capped line
+    line = ax.plot(x_data, y_capped, label=final_label, **kwargs)
+    color = line[0].get_color()
+    
+    # Overlay upward-pointing triangles for the points that were capped
+    over_mask = y_data > max_val
+    if np.any(over_mask):
+        x_over = np.array(x_data)[over_mask]
+        y_over = y_capped[over_mask]
+        # Draw the triangle (^) marker
+        ax.plot(x_over, y_over, marker='^', color=color, linestyle='None', markersize=8)
 
 def main():
     args = parse_arguments()
@@ -177,10 +212,26 @@ def main():
             ax_pen_sens_gmres = ax_pen_sens.twinx()
             ax_tau_sens_gmres = ax_tau_sens.twinx()
 
+            # --- SET STRICT Y-LIMITS + SLIGHT PADDING FOR MARKERS ---
+            ax_ref_cvg.set_ylim(bottom=0, top=MAX_EIG_PLOT * 1.05)
+            ax_ref_gmres.set_ylim(bottom=0, top=MAX_GMRES_PLOT * 1.05)
+            
+            ax_pen_sens.set_ylim(bottom=0, top=MAX_EIG_PLOT * 1.05)
+            ax_pen_sens_gmres.set_ylim(bottom=0, top=MAX_GMRES_PLOT * 1.05)
+            
+            ax_tau_sens.set_ylim(bottom=0, top=MAX_EIG_PLOT * 1.05)
+            ax_tau_sens_gmres.set_ylim(bottom=0, top=MAX_GMRES_PLOT * 1.05)
+
+            # Draw a faint dotted line across the plot to show exactly where the cap is
+            for ax_e in [ax_ref_cvg, ax_pen_sens, ax_tau_sens]:
+                ax_e.axhline(MAX_EIG_PLOT, color='gray', linestyle=':', alpha=0.5)
+            for ax_g in [ax_ref_gmres, ax_pen_sens_gmres, ax_tau_sens_gmres]:
+                ax_g.axhline(MAX_GMRES_PLOT, color='gray', linestyle=':', alpha=0.5)
+
             colors_top = plt.cm.tab10(np.linspace(0, 1, max(1, len(extremes_combos))))
             colors_bot = plt.cm.Set1(np.linspace(0, 1, max(1, max(len(tau_ext), len(pen_ext)))))
 
-            # --- Top-Left & Top-Right: Refinements vs CVG and GMRES (Extreme Combos) ---
+            # --- Top-Left & Top-Right: Refinements vs CVG and GMRES ---
             for idx, (t, p) in enumerate(extremes_combos):
                 p_val = round(p, 2)
                 refs_plot, cvg_plot, gmres_plot = [], [], []
@@ -195,26 +246,29 @@ def main():
                             gmres_plot.append(df['AvgGMRES'][mask][0])
 
                 if refs_plot:
-                    label = rf"$\tau$={t}, $C_w$={p_val}"
+                    base_label = rf"$\tau$={t}, $C_w$={p_val}"
                     ls = '-' if idx < len(extremes_combos)/2 else '--'
-                    ax_ref_cvg.plot(refs_plot, cvg_plot, marker='o', color=colors_top[idx], linestyle=ls, label=label)
-                    ax_ref_gmres.plot(refs_plot, gmres_plot, marker='s', color=colors_top[idx], linestyle=ls, label=label)
+                    
+                    plot_capped_line(ax_ref_cvg, refs_plot, cvg_plot, MAX_EIG_PLOT, base_label,
+                                     marker='o', color=colors_top[idx], linestyle=ls)
+                    plot_capped_line(ax_ref_gmres, refs_plot, gmres_plot, MAX_GMRES_PLOT, base_label,
+                                     marker='s', color=colors_top[idx], linestyle=ls)
 
-            ax_ref_cvg.set_title("Convergence vs Refinements (Parameter Extremes)")
+            ax_ref_cvg.set_title("Convergence vs Refinements")
             ax_ref_cvg.set_xlabel("Number of Refinements")
-            ax_ref_cvg.set_ylabel("Max Eigenvalue")
+            ax_ref_cvg.set_ylabel(f"Max Eigenvalue (capped at {MAX_EIG_PLOT})")
             ax_ref_cvg.set_xticks(range(1, max_ref + 1))
             ax_ref_cvg.grid(True, alpha=0.4)
-            if ax_ref_cvg.has_data(): ax_ref_cvg.legend(loc='best')
+            if ax_ref_cvg.has_data(): ax_ref_cvg.legend(loc='best', fontsize=8)
 
-            ax_ref_gmres.set_title("GMRES Iterations vs Refinements (Parameter Extremes)")
+            ax_ref_gmres.set_title("GMRES Iterations vs Refinements")
             ax_ref_gmres.set_xlabel("Number of Refinements")
-            ax_ref_gmres.set_ylabel("Avg GMRES Iterations")
+            ax_ref_gmres.set_ylabel(f"Avg GMRES Iterations (capped at {MAX_GMRES_PLOT})")
             ax_ref_gmres.set_xticks(range(1, max_ref + 1))
             ax_ref_gmres.grid(True, alpha=0.4)
-            if ax_ref_gmres.has_data(): ax_ref_gmres.legend(loc='best')
+            if ax_ref_gmres.has_data(): ax_ref_gmres.legend(loc='best', fontsize=8)
 
-            # --- Bottom-Left: C_w Sensitivity (Extreme Taus, At Max Refinement) with Twin Axis ---
+            # --- Bottom-Left: C_w Sensitivity ---
             for idx, t in enumerate(tau_ext):
                 p_plot, c_plot, g_plot = [], [], []
                 for p in PENALTY_VALUES:
@@ -228,22 +282,23 @@ def main():
                             c_plot.append(df[target_col][mask][0])
                             g_plot.append(df['AvgGMRES'][mask][0])
                 if p_plot:
-                    ax_pen_sens.plot(p_plot, c_plot, marker='o', linestyle='-', color=colors_bot[idx], label=rf"$\tau$={t} (Eig)")
-                    ax_pen_sens_gmres.plot(p_plot, g_plot, marker='x', linestyle='--', color=colors_bot[idx], label=rf"$\tau$={t} (GMRES)")
+                    plot_capped_line(ax_pen_sens, p_plot, c_plot, MAX_EIG_PLOT, rf"$\tau$={t} (Eig)",
+                                     marker='o', linestyle='-', color=colors_bot[idx])
+                    plot_capped_line(ax_pen_sens_gmres, p_plot, g_plot, MAX_GMRES_PLOT, rf"$\tau$={t} (GMRES)",
+                                     marker='x', linestyle='--', color=colors_bot[idx])
 
             ax_pen_sens.set_title(rf"$C_w$ Sensitivity (at ref = {max_ref})")
             ax_pen_sens.set_xlabel(rf"$C_w$")
-            ax_pen_sens.set_ylabel("Max Eigenvalue")
-            ax_pen_sens_gmres.set_ylabel("Avg GMRES Iterations")
+            ax_pen_sens.set_ylabel(f"Max Eigenvalue (capped at {MAX_EIG_PLOT})")
+            ax_pen_sens_gmres.set_ylabel(f"Avg GMRES (capped at {MAX_GMRES_PLOT})")
             ax_pen_sens.grid(True, alpha=0.4)
             
-            # Combine legends for Bottom-Left
             lines_1, labels_1 = ax_pen_sens.get_legend_handles_labels()
             lines_2, labels_2 = ax_pen_sens_gmres.get_legend_handles_labels()
             if lines_1 or lines_2:
-                ax_pen_sens.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best', fontsize=9)
+                ax_pen_sens.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best', fontsize=8)
 
-            # --- Bottom-Right: Tau Sensitivity (Extreme Penalties, At Max Refinement) with Twin Axis ---
+            # --- Bottom-Right: Tau Sensitivity ---
             for idx, p in enumerate(pen_ext):
                 p_val = round(p, 2)
                 t_plot, c_plot, g_plot = [], [], []
@@ -258,20 +313,21 @@ def main():
                             g_plot.append(df['AvgGMRES'][mask][0])
                 if t_plot:
                     t_strs = [str(x) for x in t_plot]
-                    ax_tau_sens.plot(t_strs, c_plot, marker='o', linestyle='-', color=colors_bot[idx], label=rf"$C_w$={p_val} (Eig)")
-                    ax_tau_sens_gmres.plot(t_strs, g_plot, marker='x', linestyle='--', color=colors_bot[idx], label=rf"$C_w$={p_val} (GMRES)")
+                    plot_capped_line(ax_tau_sens, t_strs, c_plot, MAX_EIG_PLOT, rf"$C_w$={p_val} (Eig)",
+                                     marker='o', linestyle='-', color=colors_bot[idx])
+                    plot_capped_line(ax_tau_sens_gmres, t_strs, g_plot, MAX_GMRES_PLOT, rf"$C_w$={p_val} (GMRES)",
+                                     marker='x', linestyle='--', color=colors_bot[idx])
 
             ax_tau_sens.set_title(rf"$\tau$ Sensitivity (at ref = {max_ref})")
             ax_tau_sens.set_xlabel(rf"$\tau$")
-            ax_tau_sens.set_ylabel("Max Eigenvalue")
-            ax_tau_sens_gmres.set_ylabel("Avg GMRES Iterations")
+            ax_tau_sens.set_ylabel(f"Max Eigenvalue (capped at {MAX_EIG_PLOT})")
+            ax_tau_sens_gmres.set_ylabel(f"Avg GMRES (capped at {MAX_GMRES_PLOT})")
             ax_tau_sens.grid(True, alpha=0.4)
             
-            # Combine legends for Bottom-Right
             lines_3, labels_3 = ax_tau_sens.get_legend_handles_labels()
             lines_4, labels_4 = ax_tau_sens_gmres.get_legend_handles_labels()
             if lines_3 or lines_4:
-                ax_tau_sens.legend(lines_3 + lines_4, labels_3 + labels_4, loc='best', fontsize=9)
+                ax_tau_sens.legend(lines_3 + lines_4, labels_3 + labels_4, loc='best', fontsize=8)
 
             plt.tight_layout()
             plt.subplots_adjust(top=0.92)
@@ -304,9 +360,18 @@ def main():
                     ax.set_visible(False)
                     return
 
+                vmin = np.nanmin(Z_data)
+                
+                if "Eigenvalue" in title:
+                    vmax_raw = min(np.nanmax(Z_data), MAX_EIG_PLOT)
+                else:
+                    vmax_raw = min(np.nanmax(Z_data), MAX_GMRES_PLOT)
+                
+                vmax = max(vmax_raw, vmin + 1e-3)
+
                 cmap = 'viridis_r'
-                cax = ax.imshow(Z_data, origin='lower', aspect='auto', cmap=cmap)
-                fig_hm.colorbar(cax, ax=ax, label=title)
+                cax = ax.imshow(Z_data, origin='lower', aspect='auto', cmap=cmap, vmin=vmin, vmax=vmax)
+                fig_hm.colorbar(cax, ax=ax, label=title + " (capped)")
 
                 ax.set_xticks(np.arange(len(TAU_VALUES)))
                 ax.set_xticklabels([str(t) for t in TAU_VALUES])
@@ -317,9 +382,6 @@ def main():
                 ax.set_ylabel(rf"$C_w$", fontsize=12)
                 ax.set_title(title, fontsize=14)
 
-                vmin = np.nanmin(Z_data)
-                vmax = np.nanmax(Z_data)
-
                 for i_p in range(len(PENALTY_VALUES)):
                     for i_t in range(len(TAU_VALUES)):
                         val = Z_data[i_p, i_t]
@@ -327,10 +389,15 @@ def main():
                             norm_val = (val - vmin) / (vmax - vmin) if vmax > vmin else 0.5
                             text_col = "white" if norm_val > 0.5 else "black"
                             fmt_str = f"{{:{val_fmt}}}"
-                            ax.text(i_t, i_p, fmt_str.format(val), ha="center", va="center", 
+                            
+                            val_str = fmt_str.format(val)
+                            if val > vmax_raw:
+                                val_str = ">" + fmt_str.format(vmax_raw)
+
+                            ax.text(i_t, i_p, val_str, ha="center", va="center", 
                                     color=text_col, fontweight='bold', fontsize=11)
 
-            plot_single_heatmap(axes_hm[0], Z_eig, 'Max Eigenvalue (Convergence Rate)', '.3f')
+            plot_single_heatmap(axes_hm[0], Z_eig, 'Max Eigenvalue', '.3f')
             plot_single_heatmap(axes_hm[1], Z_gmres, 'Avg GMRES Iterations', '.1f')
 
             plt.tight_layout()
