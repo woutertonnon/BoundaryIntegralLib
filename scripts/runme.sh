@@ -12,6 +12,12 @@ module load stack/2024-06
 module load python/3.12.8
 module load gcc/12.2.0            
 module load cmake
+module load openmpi
+module load boost
+module load eigen
+module load metis # Completely useless here, but needs to be loaded for suite-sparse
+module load suite-sparse
+module load spectra
 
 # 2. Build the C++ executable (Purge old build first)
 echo "Purging old release directory and starting compilation..."

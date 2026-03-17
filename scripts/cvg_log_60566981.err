@@ -1,0 +1,35 @@
+Many modules are hidden in this stack. Use "module --show_hidden spider SOFTWARE" if you are not able to find the required software
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) boost/1.83.0
+
+CMake Warning (dev) at CMakeLists.txt:18 (find_package):
+  Policy CMP0144 is not set: find_package uses upper-case <PACKAGENAME>_ROOT
+  variables.  Run "cmake --help-policy CMP0144" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  Environment variable BOOST_ROOT is set to:
+
+    /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/boost-1.83.0-e2hyxs6q5vy5ty2ie66ptc5llame6ilc
+
+  For compatibility, find_package is ignoring the variable, but code in a
+  .cmake module might still use it.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning at tests/CMakeLists.txt:3 (message):
+  GoogleTest not found.  Install libgtest-dev (and build the libs) to enable
+  the test target.
+
+
+/cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/mesh/mesh_operators.cpp: In member function 'virtual int mfem::ThresholdRefiner::ApplyImpl(mfem::Mesh&)':
+/cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/mesh/mesh_operators.cpp:146:20: warning: arithmetic between different enumeration types 'mfem::MeshOperator::Action' and 'mfem::MeshOperator::Info' is deprecated [-Wdeprecated-enum-enum-conversion]
+  146 |    return CONTINUE + REFINED;
+      |           ~~~~~~~~~^~~~~~~~~
+/cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/mesh/mesh_operators.cpp: In member function 'virtual int mfem::ThresholdDerefiner::ApplyImpl(mfem::Mesh&)':
+/cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/mesh/mesh_operators.cpp:165:29: warning: arithmetic between different enumeration types 'mfem::MeshOperator::Action' and 'mfem::MeshOperator::Info' is deprecated [-Wdeprecated-enum-enum-conversion]
+  165 |    return derefs ? CONTINUE + DEREFINED : NONE;
+      |                    ~~~~~~~~~^~~~~~~~~~~
+/cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/mesh/mesh_operators.cpp: In member function 'virtual int mfem::CoefficientRefiner::PreprocessMesh(mfem::Mesh&, int)':
+/cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/mesh/mesh_operators.cpp:293:20: warning: arithmetic between different enumeration types 'mfem::MeshOperator::Action' and 'mfem::MeshOperator::Info' is deprecated [-Wdeprecated-enum-enum-conversion]
+  293 |    return CONTINUE + REFINED;
+      |           ~~~~~~~~~^~~~~~~~~

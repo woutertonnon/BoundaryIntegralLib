@@ -1,0 +1,499 @@
+Purging old release directory and starting compilation...
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/gcc-12.2.0-bj2twcnwcownogkldo6ndfylxx5sqpbn/bin/gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/gcc-12.2.0-bj2twcnwcownogkldo6ndfylxx5sqpbn/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Boost: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/boost-1.83.0-e2hyxs6q5vy5ty2ie66ptc5llame6ilc/lib/cmake/Boost-1.83.0/BoostConfig.cmake (found version "1.83.0") found components: program_options 
+-- CMake version: 3.27.7
+-- Loading USER_CONFIG = /cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/config/user.cmake (NOTFOUND)
+-- USE_XSDK_DEFAULTS = 'OFF'
+-- Floating-point precision: MFEM_PRECISION = double
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- Found OpenMP: TRUE (found version "4.5")  
+-- Looking for sgemm_
+-- Looking for sgemm_ - not found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Looking for sgemm_
+-- Looking for sgemm_ - found
+-- Found BLAS: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/openblas-0.3.24-eiewhivju2io7doutnqmhj7rmisarv4b/lib/libopenblas.so  
+-- Looking for cheev_
+-- Looking for cheev_ - found
+-- Found LAPACK: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/openblas-0.3.24-eiewhivju2io7doutnqmhj7rmisarv4b/lib/libopenblas.so;-lm;-ldl  
+-- Looking for SuiteSparse ...
+--    in SuiteSparse_DIR = /cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/../SuiteSparse
+-- SuiteSparse: UMFPACK: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libumfpack.so
+-- SuiteSparse: KLU: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libklu.so
+-- SuiteSparse: AMD: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libamd.so
+-- SuiteSparse: BTF: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libbtf.so
+-- SuiteSparse: CHOLMOD: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libcholmod.so
+-- SuiteSparse: COLAMD: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libcolamd.so
+-- SuiteSparse: CAMD: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libcamd.so
+-- SuiteSparse: CCOLAMD: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libccolamd.so
+-- SuiteSparse: config: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libsuitesparseconfig.so
+-- SuiteSparse: looking for required package: BLAS
+-- SuiteSparse: looking for required package: METIS
+-- Looking for METIS ...
+--    in METIS_DIR = /cluster/home/rdabetic/BoundaryIntegralLib/extern/mfem/../metis-4.0
+-- Performing Test METIS_VERSION_5
+-- Performing Test METIS_VERSION_5 - Success
+-- Found METIS: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/metis-5.1.0-msicjrku67aq3xislwbudlewpxgsdrem/lib/libmetis.so  
+-- METIS_INCLUDE_DIRS=/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/metis-5.1.0-msicjrku67aq3xislwbudlewpxgsdrem/include
+-- Found SuiteSparse: /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libumfpack.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libklu.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libamd.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libbtf.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libcholmod.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libcolamd.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libcamd.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libccolamd.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/lib/libsuitesparseconfig.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/openblas-0.3.24-eiewhivju2io7doutnqmhj7rmisarv4b/lib/libopenblas.so;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/metis-5.1.0-msicjrku67aq3xislwbudlewpxgsdrem/lib/libmetis.so  
+-- SuiteSparse_INCLUDE_DIRS=/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/include;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/metis-5.1.0-msicjrku67aq3xislwbudlewpxgsdrem/include
+--  *** Warning: using SuiteSparse with METIS v5!
+-- Looking for POSIXClocks ...
+--    checking library: <standard c/c++>
+-- Found POSIXClocks: TRUE  
+-- MFEM: using package OPENMP
+-- MFEM: using package LAPACK
+-- MFEM: using package BLAS
+-- MFEM: using package METIS
+-- MFEM: using package SuiteSparse
+-- MFEM: using package POSIXCLOCKS
+-- MFEM shared library: BUILD_SHARED_LIBS = OFF
+-- MFEM build type: CMAKE_BUILD_TYPE = Release
+-- MFEM version: v4.9.1
+-- MFEM git string: tags/v4.9-313-gf2a42123f72c37874633f850e3d556f18aaad710
+-- TPL_INCLUDE_DIRS = /cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/metis-5.1.0-msicjrku67aq3xislwbudlewpxgsdrem/include;/cluster/software/stacks/2024-06/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-12.2.0/suite-sparse-5.13.0-76ujjbwexjdwo2zz5fimyrhitnmltelx/include
+-- Writing substitute header --> "mfem.hpp"
+-- Writing substitute header --> "mfem-performance.hpp"
+-- performance_ex1: add flags "-march=native -Wall -pedantic --param max-completely-peel-times=3"
+-- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
+-- CMAKE_INSTALL_PREFIX = /usr/local
+-- Configuring done (4.3s)
+-- Generating done (3.2s)
+-- Build files have been written to: /cluster/home/rdabetic/BoundaryIntegralLib/release
+[  0%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/array.cpp.o
+[  2%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/cuda.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/device.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/isockstream.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/mem_manager.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/gecko.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/binaryio.cpp.o
+[  2%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/globals.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/error.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/hash.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/occa.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/osockstream.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/stable3d.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/tic_toc.cpp.o
+[  4%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/tinyxml2.cpp.o
+[  6%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/socketstream.cpp.o
+[  6%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/optparser.cpp.o
+[  6%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/sets.cpp.o
+[  9%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/table.cpp.o
+[  9%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/version.cpp.o
+[  9%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/auxiliary.cpp.o
+[  9%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/batched/batched.cpp.o
+[  9%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/batched/gpu_blas.cpp.o
+[  9%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/general/hip.cpp.o
+[ 11%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/batched/solver.cpp.o
+[ 11%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/batched/native.cpp.o
+[ 11%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/batched/magma.cpp.o
+[ 11%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/blockmatrix.cpp.o
+[ 11%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/blockoperator.cpp.o
+[ 11%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/blockvector.cpp.o
+[ 13%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/complex_densemat.cpp.o
+[ 13%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/complex_operator.cpp.o
+[ 13%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/constraints.cpp.o
+[ 13%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/densemat.cpp.o
+[ 13%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/filteredsolver.cpp.o
+[ 13%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/handle.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/mma.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/matrix.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/ode.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/operator.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/ordering.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/particlevector.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/solvers.cpp.o
+[ 15%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/sparsemat.cpp.o
+[ 18%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/sparsesmoothers.cpp.o
+[ 18%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/symmat.cpp.o
+[ 18%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/linalg/vector.cpp.o
+[ 18%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/attribute_sets.cpp.o
+[ 18%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/element.cpp.o
+[ 18%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/exodus_writer.cpp.o
+[ 20%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/face_nbr_geom.cpp.o
+[ 20%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/gmsh.cpp.o
+[ 20%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/hexahedron.cpp.o
+[ 20%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/mesh.cpp.o
+[ 20%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/mesh_operators.cpp.o
+[ 20%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/mesh_readers.cpp.o
+[ 22%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/ncmesh.cpp.o
+[ 22%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/nurbs.cpp.o
+[ 22%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/ncnurbs.cpp.o
+[ 22%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/point.cpp.o
+[ 22%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/pyramid.cpp.o
+[ 22%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/quadrilateral.cpp.o
+[ 25%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/segment.cpp.o
+[ 25%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/spacing.cpp.o
+[ 25%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/tetrahedron.cpp.o
+[ 25%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/triangle.cpp.o
+[ 25%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/vertex.cpp.o
+[ 25%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/vtk.cpp.o
+[ 27%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/vtkhdf.cpp.o
+[ 27%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/wedge.cpp.o
+[ 27%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/submesh/submesh.cpp.o
+[ 27%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/submesh/ncsubmesh.cpp.o
+[ 27%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/submesh/submesh_utils.cpp.o
+[ 27%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/mesh/submesh/transfermap.cpp.o
+[ 29%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/bilinearform.cpp.o
+[ 29%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/bilinearform_ext.cpp.o
+[ 29%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/bilininteg.cpp.o
+[ 29%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_br2.cpp.o
+[ 29%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_convection_mf.cpp.o
+[ 29%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_convection_pa.cpp.o
+[ 31%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_convection_ea.cpp.o
+[ 31%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_curlcurl_pa.cpp.o
+[ 31%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_dgdiffusion_pa.cpp.o
+[ 31%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_dgtrace_pa.cpp.o
+[ 31%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_dgtrace_ea.cpp.o
+[ 31%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_diffusion_mf.cpp.o
+[ 34%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_diffusion_pa.cpp.o
+[ 34%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_diffusion_ea.cpp.o
+[ 34%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_divdiv_pa.cpp.o
+[ 34%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_diffusion_patch.cpp.o
+[ 34%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_elasticity_ea.cpp.o
+[ 34%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_elasticity_pa.cpp.o
+[ 36%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_gradient_pa.cpp.o
+[ 36%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_interp_pa.cpp.o
+[ 36%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_mass_mf.cpp.o
+[ 36%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_mass_pa.cpp.o
+[ 36%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_mass_ea.cpp.o
+[ 36%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_mixedcurl_pa.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_mixedvecgrad_pa.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_trace_jump_ea.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_transpose_ea.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vecdiffusion_mf.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vecdiffusion_pa.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vecdiv_pa.cpp.o
+[ 38%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vecmass_mf.cpp.o
+[ 40%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vecmass_pa.cpp.o
+[ 40%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vectorfediv_pa.cpp.o
+[ 40%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_vectorfemass_pa.cpp.o
+[ 40%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_diffusion_kernels.cpp.o
+[ 40%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_elasticity_kernels.cpp.o
+[ 40%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_hcurl_kernels.cpp.o
+[ 43%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_hdiv_ea.cpp.o
+[ 43%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_hdiv_kernels.cpp.o
+[ 43%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_hcurlhdiv_kernels.cpp.o
+[ 43%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/bilininteg_mass_kernels.cpp.o
+[ 43%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/lininteg_boundary.cpp.o
+[ 43%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/lininteg_boundary_flux.cpp.o
+[ 45%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/lininteg_domain.cpp.o
+[ 45%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/lininteg_domain_grad.cpp.o
+[ 45%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/lininteg_domain_vectorfe.cpp.o
+[ 45%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/nonlininteg_vecconvection_pa.cpp.o
+[ 45%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integ/nonlininteg_vecconvection_mf.cpp.o
+[ 45%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/coefficient.cpp.o
+[ 47%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/complex_fem.cpp.o
+[ 47%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/convergence.cpp.o
+[ 47%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/datacollection.cpp.o
+[ 47%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/doftrans.cpp.o
+[ 47%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/dgmassinv.cpp.o
+[ 47%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/dfem/doperator.cpp.o
+[ 50%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/eltrans.cpp.o
+[ 50%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/batchitrans.cpp.o
+[ 50%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/estimators.cpp.o
+[ 50%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe.cpp.o
+[ 50%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/face_map_utils.cpp.o
+[ 50%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_base.cpp.o
+[ 52%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_fixed_order.cpp.o
+[ 52%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_h1.cpp.o
+[ 52%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_l2.cpp.o
+[ 52%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_nd.cpp.o
+[ 52%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_nurbs.cpp.o
+[ 52%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_pos.cpp.o
+[ 54%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_pyramid.cpp.o
+[ 54%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_rt.cpp.o
+[ 54%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe/fe_ser.cpp.o
+[ 54%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fe_coll.cpp.o
+[ 54%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fespace.cpp.o
+[ 54%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/derefmat_op.cpp.o
+[ 56%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/pderefmat_op.cpp.o
+[ 56%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/geom.cpp.o
+[ 56%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/gridfunc.cpp.o
+[ 56%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/hybridization.cpp.o
+[ 56%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/hybridization_ext.cpp.o
+[ 56%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/intrules.cpp.o
+[ 59%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/intrules_cut.cpp.o
+[ 59%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/interface/basis.cpp.o
+[ 59%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/interface/restriction.cpp.o
+[ 59%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/interface/operator.cpp.o
+[ 59%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/interface/util.cpp.o
+[ 59%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/integrators/convection/convection.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/integrators/diffusion/diffusion.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/integrators/nlconvection/nlconvection.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/integrators/mass/mass.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/solvers/algebraic.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/solvers/full-assembly.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/ceed/solvers/solvers-atpmg.cpp.o
+[ 61%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/kdtree.cpp.o
+[ 63%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/linearform.cpp.o
+[ 63%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/linearform_ext.cpp.o
+[ 63%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/lininteg.cpp.o
+[ 63%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/lor/lor.cpp.o
+[ 63%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/lor/lor_ads.cpp.o
+[ 63%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/lor/lor_ams.cpp.o
+[ 65%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/lor/lor_batched.cpp.o
+[ 65%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/multigrid.cpp.o
+[ 65%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/nonlinearform.cpp.o
+[ 65%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/nonlinearform_ext.cpp.o
+[ 65%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/nonlininteg.cpp.o
+[ 65%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/fespacehierarchy.cpp.o
+[ 68%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qfunction.cpp.o
+[ 68%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qinterp/eval_by_nodes.cpp.o
+[ 68%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qinterp/det.cpp.o
+[ 68%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qinterp/eval_by_vdim.cpp.o
+[ 68%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qinterp/eval_hdiv.cpp.o
+[ 68%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qinterp/grad_by_nodes.cpp.o
+[ 70%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qinterp/grad_by_vdim.cpp.o
+[ 70%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/qspace.cpp.o
+[ 70%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/quadinterpolator.cpp.o
+[ 70%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/quadinterpolator_face.cpp.o
+[ 70%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/normal_deriv_restriction.cpp.o
+[ 70%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/restriction.cpp.o
+[ 72%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/staticcond.cpp.o
+[ 72%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop.cpp.o
+[ 72%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/pa.cpp.o
+[ 72%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/diag2_limit.cpp.o
+[ 72%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/diag2.cpp.o
+[ 72%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/grad2_limit.cpp.o
+[ 75%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/grad2.cpp.o
+[ 75%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/diag3_limit.cpp.o
+[ 75%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/diag3.cpp.o
+[ 75%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/grad3_limit.cpp.o
+[ 75%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/assemble/grad3.cpp.o
+[ 75%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/001.cpp.o
+[ 77%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/002.cpp.o
+[ 77%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/007.cpp.o
+[ 77%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/056.cpp.o
+[ 77%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/077.cpp.o
+[ 77%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/080.cpp.o
+[ 77%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/094.cpp.o
+[ 79%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/302.cpp.o
+[ 79%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/303.cpp.o
+[ 79%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/315.cpp.o
+[ 79%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/318.cpp.o
+[ 79%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/321.cpp.o
+[ 79%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/332.cpp.o
+[ 81%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/metrics/338.cpp.o
+[ 81%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/grad2_limit.cpp.o
+[ 81%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/grad2.cpp.o
+[ 81%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/mult2_limit.cpp.o
+[ 81%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/mult2.cpp.o
+[ 81%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/grad3_limit.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/grad3.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/mult3_limit.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/mult/mult3.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/det2_jpr.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/det3_jpr.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/discrete.cpp.o
+[ 84%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/energy2_limit.cpp.o
+[ 86%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/energy2.cpp.o
+[ 86%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/energy3_limit.cpp.o
+[ 86%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/energy3.cpp.o
+[ 86%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/target2.cpp.o
+[ 86%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop/tools/target3.cpp.o
+[ 86%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop_tools.cpp.o
+[ 88%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/tmop_amr.cpp.o
+[ 88%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/gslib.cpp.o
+[ 88%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/gslib/findpts_local_2.cpp.o
+[ 88%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/gslib/findpts_local_3.cpp.o
+[ 88%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/gslib/interpolate_local_2.cpp.o
+[ 88%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/gslib/interpolate_local_3.cpp.o
+[ 90%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/transfer.cpp.o
+[ 90%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/hyperbolic.cpp.o
+[ 90%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/integrator.cpp.o
+[ 90%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/bounds.cpp.o
+[ 90%] Building CXX object extern/mfem/CMakeFiles/mfem.dir/fem/particleset.cpp.o
+[ 90%] Linking CXX static library libmfem.a
+[ 90%] Built target mfem
+[ 90%] Building CXX object src/CMakeFiles/incidence.dir/incidence.cpp.o
+[ 90%] Building CXX object src/CMakeFiles/boundaryoperatorslib.dir/BoundaryOperators.cpp.o
+[ 90%] Building CXX object src/CMakeFiles/bd_separator.dir/BoundarySeparator.cpp.o
+[ 90%] Building CXX object src/CMakeFiles/spectra_mfem.dir/SpectraErrorOp.cpp.o
+[ 90%] Linking CXX static library libboundaryoperatorslib.a
+[ 90%] Built target boundaryoperatorslib
+[ 93%] Linking CXX static library libincidence.a
+[ 93%] Linking CXX static library libbd_separator.a
+[ 93%] Built target incidence
+[ 93%] Built target bd_separator
+[ 93%] Building CXX object src/CMakeFiles/stokesoperator.dir/StokesOperator.cpp.o
+[ 95%] Linking CXX static library libstokesoperator.a
+[ 95%] Built target stokesoperator
+[ 95%] Building CXX object src/CMakeFiles/stokesdgs.dir/StokesDGS.cpp.o
+[ 95%] Linking CXX static library libstokesdgs.a
+[ 95%] Built target stokesdgs
+[ 95%] Building CXX object src/CMakeFiles/stokesmg.dir/StokesMG.cpp.o
+[ 97%] Linking CXX static library libspectra_mfem.a
+[ 97%] Built target spectra_mfem
+[ 97%] Linking CXX static library libstokesmg.a
+[ 97%] Built target stokesmg
+[ 97%] Building CXX object targets/CMakeFiles/femconvergence.dir/FEMConvergence.cpp.o
+[ 97%] Building CXX object targets/CMakeFiles/mgconvergence.dir/MGConvergence.cpp.o
+[100%] Linking CXX executable ../femconvergence
+[100%] Built target femconvergence
+[100%] Linking CXX executable ../mgconvergence
+[100%] Built target mgconvergence
+Compilation finished.
+Starting Python parameter study...
+Automatically purging old files...
+Purged 0 CSV files and 0 PDF plots.
+
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_0.0_p_10.0_V.csv --tau 0.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_0.0_p_20.0_V.csv --tau 0.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_0.0_p_40.0_V.csv --tau 0.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_0.0_p_80.0_V.csv --tau 0.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_10.0_p_10.0_V.csv --tau 10.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_10.0_p_20.0_V.csv --tau 10.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_10.0_p_40.0_V.csv --tau 10.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_10.0_p_80.0_V.csv --tau 10.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_100.0_p_10.0_V.csv --tau 100.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_100.0_p_20.0_V.csv --tau 100.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_100.0_p_40.0_V.csv --tau 100.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_100.0_p_80.0_V.csv --tau 100.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_1000.0_p_10.0_V.csv --tau 1000.0 --penalty 10.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_1000.0_p_20.0_V.csv --tau 1000.0 --penalty 20.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_1000.0_p_40.0_V.csv --tau 1000.0 --penalty 40.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/ball.msh --refinements 4 --output out/out_ball.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner.msh --refinements 4 --output out/out_corner.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/corner_structured.msh --refinements 4 --output out/out_corner_structured.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube.msh --refinements 4 --output out/out_cube.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_hole.msh --refinements 4 --output out/out_cube_hole.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_two_voids.msh --refinements 4 --output out/out_cube_two_voids.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cube_void.msh --refinements 4 --output out/out_cube_void.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/cylinder.msh --refinements 4 --output out/out_cylinder.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+Running: ../release/mgconvergence --mesh ../meshes/tetra.msh --refinements 4 --output out/out_tetra.msh_tau_1000.0_p_80.0_V.csv --tau 1000.0 --penalty 80.0 --cycle V --nev 2 --gmres 8 --gmres_tol 1e-06 --eval_tol 0.001
+All done! PDF plots are saved in the 'plots' directory.

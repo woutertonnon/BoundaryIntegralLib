@@ -16,25 +16,27 @@ MESH_FOLDER = "../meshes"
 OUTPUT_FOLDER = "out"
 PLOT_FOLDER = "plots"
 
-NUM_JOBS = 6  # Number of parallel jobs
+NUM_JOBS = 16  # Number of parallel jobs
 
 # Default number of refinements for all meshes
 DEFAULT_REFINEMENTS = 4
 
 # Penalty Configuration
-PENALTY_VALUES = [10.0, 20.0, 30.0, 40.0]
+PENALTY_VALUES = [10.0, 20.0, 40.0, 80.0]
 
 # Time-stepping (Tau) Configuration
 TAU_VALUES = [0.0, 10.0, 100.0, 1000.0]
 
-# Mesh configuration: Using the default for all
 MESH_CONFIG = {
-    "cube.msh": DEFAULT_REFINEMENTS,
     "ball.msh": DEFAULT_REFINEMENTS,
-    "ball_hole.msh": DEFAULT_REFINEMENTS,
     "corner.msh": DEFAULT_REFINEMENTS,
     "corner_structured.msh": DEFAULT_REFINEMENTS,
-    "cylinder.msh": DEFAULT_REFINEMENTS
+    "cube.msh": DEFAULT_REFINEMENTS,
+    "cube_hole.msh": DEFAULT_REFINEMENTS,
+    "cube_two_voids.msh": DEFAULT_REFINEMENTS,
+    "cube_void.msh": DEFAULT_REFINEMENTS,
+    "cylinder.msh": DEFAULT_REFINEMENTS,
+    "tetra.msh": DEFAULT_REFINEMENTS
 }
 
 GMRES_RUNS = 8
