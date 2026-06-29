@@ -235,6 +235,47 @@ public:
                             mfem::DenseMatrix &elmat);
 };
 
+// Mixed boundary face integrator for the normal-flux pairing
+//
+//   m_bdr(u, q) = int_F (u . n) q dF      over boundary faces F
+//
+// trial_fe1 is the H(curl)/ND velocity (vector proxy u); test_fe1 is the H1
+// scalar (pressure proxy q).  The output elmat has size (test_dof x trial_dof),
+// so on a MixedBilinearForm(trial = ND, test = H1) the assembled matrix maps a
+// velocity to (<u.n, q_j>)_j.  Used to build the consistent Nitsche outflow
+// coupling (its transpose supplies the symmetric <p, v.n> momentum term).
+//
+// Usage:
+//   mixed_blf.AddBdrFaceIntegrator(new ND_NormalScalarBdrIntegrator(), marker);
+class ND_NormalScalarBdrIntegrator : public mfem::BilinearFormIntegrator
+{
+public:
+    ND_NormalScalarBdrIntegrator() {}
+
+    virtual void AssembleElementMatrix(const mfem::FiniteElement &el,
+                                       mfem::ElementTransformation &Trans,
+                                       mfem::DenseMatrix &elmat)
+    {
+        MFEM_ABORT("ND_NormalScalarBdrIntegrator: element assembly not supported");
+    }
+
+    void AssembleFaceMatrix(const mfem::FiniteElement &el1,
+                            const mfem::FiniteElement &el2,
+                            mfem::FaceElementTransformations &Trans,
+                            mfem::DenseMatrix &elmat)
+    {
+        MFEM_ABORT("ND_NormalScalarBdrIntegrator: 2-arg face assembly not supported; "
+                   "use MixedBilinearForm::AddBdrFaceIntegrator");
+    }
+
+    void AssembleFaceMatrix(const mfem::FiniteElement &trial_fe1,
+                            const mfem::FiniteElement &test_fe1,
+                            const mfem::FiniteElement &trial_fe2,
+                            const mfem::FiniteElement &test_fe2,
+                            mfem::FaceElementTransformations &Trans,
+                            mfem::DenseMatrix &elmat);
+};
+
 // Boundary face penalty for H(div) / RT spaces.
 //
 // Adds the Nitsche-style tangential penalty on boundary faces:

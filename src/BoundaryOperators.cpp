@@ -606,6 +606,72 @@ void RT_ND_BdrCrossProductIntegrator::AssembleFaceMatrix(
 }
 
 // ---------------------------------------------------------------------------
+// ND_NormalScalarBdrIntegrator
+// ---------------------------------------------------------------------------
+//
+// Assembles the boundary-face normal-flux pairing
+//
+//   m_bdr(u, q) = int_F (u . n) q dF
+//
+// trial_fe1 = ND velocity (vector proxy u), test_fe1 = H1 scalar (q).
+// elmat has size (test_dof x trial_dof).  Works in 2D and 3D: u.n uses the
+// genuine spatial normal, so no 3D embedding is needed (the cross-product
+// embedding issue does not arise for a dot product).
+//
+void ND_NormalScalarBdrIntegrator::AssembleFaceMatrix(
+    const mfem::FiniteElement &trial_fe1,  // ND velocity
+    const mfem::FiniteElement &test_fe1,   // H1 pressure
+    const mfem::FiniteElement &trial_fe2,
+    const mfem::FiniteElement &test_fe2,
+    mfem::FaceElementTransformations &Trans,
+    mfem::DenseMatrix &elmat)
+{
+    MFEM_ASSERT(Trans.Elem2No < 0,
+                "ND_NormalScalarBdrIntegrator: expected a boundary face");
+
+    const int trial_dof = trial_fe1.GetDof();  // ND DOFs
+    const int test_dof  = test_fe1.GetDof();   // H1 DOFs
+    const int dim       = trial_fe1.GetDim();
+
+    elmat.SetSize(test_dof, trial_dof);
+    elmat = 0.0;
+
+    const mfem::IntegrationRule &ir = mfem::IntRules.Get(
+        static_cast<mfem::Geometry::Type>(Trans.FaceGeom),
+        2 * std::max(trial_fe1.GetOrder(), test_fe1.GetOrder()) + 1);
+
+    mfem::Vector       normal(dim);
+    mfem::DenseMatrix  trial_shape(trial_dof, dim);  // ND vector shape
+    mfem::Vector       test_shape(test_dof);         // H1 scalar shape
+
+    for (int q = 0; q < ir.GetNPoints(); ++q)
+    {
+        const mfem::IntegrationPoint &ip_face = ir.IntPoint(q);
+        Trans.SetAllIntPoints(&ip_face);
+
+        // Outward normal (unnormalised; |normal| = face measure element).
+        Trans.Face->SetIntPoint(&ip_face);
+        mfem::CalcOrtho(Trans.Face->Jacobian(), normal);
+
+        // Shapes on the Elem1 side at the matching volume integration point.
+        trial_fe1.CalcVShape(*Trans.Elem1, trial_shape);
+        test_fe1.CalcShape(Trans.GetElement1IntPoint(), test_shape);
+
+        const double w = ip_face.weight;  // CalcOrtho already carries the area
+
+        for (int j = 0; j < test_dof; ++j)
+        {
+            for (int i = 0; i < trial_dof; ++i)
+            {
+                mfem::Vector u(dim);
+                trial_shape.GetRow(i, u);
+                elmat(j, i) += w * (u * normal) * test_shape(j);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // RT_BdrTangentPenaltyLFIntegrator
 // ---------------------------------------------------------------------------
 //
