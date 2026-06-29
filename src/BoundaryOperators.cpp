@@ -2,6 +2,43 @@
 #include "mfem.hpp"
 #include <algorithm> // std::max
 
+namespace
+{
+// ---------------------------------------------------------------------------
+// 2D/3D embedding helpers for the H(curl) Nitsche integrators.
+//
+// The curl-curl Nitsche boundary form involves the cross products n x u and
+// n x curl u.  In 3D both operands are genuine 3-vectors.  In 2D a Nedelec
+// field u is a 2-vector, and its curl is the *scalar* omega = d_x u_y - d_y u_x.
+//
+// Rather than re-derive the 2D weak form (error-prone sign bookkeeping), we
+// embed the 2D problem in 3D: the domain lies in the z = 0 plane, vector
+// fields have zero z-component, and the scalar curl becomes the z-component
+// (0, 0, omega).  Under this embedding the 3D identities — and hence the
+// existing, validated cross3D-based formulas — hold verbatim, so the 2D
+// operator is the exact planar reduction of the 3D curl-curl Nitsche form.
+//
+// embedVec3:  (a_x, a_y[, 0])           -> 3-vector
+// embedCurl3: 3D curl as-is; 2D scalar  -> (0, 0, omega)
+// ---------------------------------------------------------------------------
+inline mfem::Vector embedVec3(const mfem::Vector &a)
+{
+    mfem::Vector e(3);
+    e = 0.0;
+    for (int d = 0; d < a.Size() && d < 3; ++d) { e[d] = a[d]; }
+    return e;
+}
+
+inline mfem::Vector embedCurl3(const mfem::Vector &c)
+{
+    mfem::Vector e(3);
+    e = 0.0;
+    if (c.Size() == 1) { e[2] = c[0]; }              // 2D: scalar curl -> +z
+    else { for (int d = 0; d < c.Size() && d < 3; ++d) { e[d] = c[d]; } }
+    return e;
+}
+} // anonymous namespace
+
 
 // ---------------------------------------------------------------------------
 // RT_DGPenaltyIntegrator
@@ -683,39 +720,49 @@ void ND_NitscheIntegrator::AssembleFaceMatrix(
       double h = sqrt(area);
       normal *= 1./area; //normalize n
 
-      mfem::DenseMatrix shape(el1.GetDof(), Trans.GetSpaceDim());
-      mfem::DenseMatrix curl_shape(el1.GetDof(), 3);
+      const int sdim = Trans.GetSpaceDim();
+      const int cdim = (dim == 3) ? 3 : 1;   // curl: 3-vector (3D) or scalar (2D)
+      mfem::DenseMatrix shape(el1.GetDof(), sdim);
+      mfem::DenseMatrix curl_shape(el1.GetDof(), cdim);
 
       mfem::ElementTransformation *tr1 = Trans.Elem1;
       //tr1->SetIntPoint(&ip_face);
       el1.CalcVShape(*tr1, shape);
       el1.CalcPhysCurlShape(*tr1, curl_shape);
 
-      mfem::Vector temp_out(3);
+      mfem::Vector temp_out(sdim);
       Trans.Transform(ip_face,temp_out);
+
+      // Embed the (normalized) face normal into 3D once per quad point.
+      mfem::Vector n3 = embedVec3(normal);
 
       for (int l = 0; l < el1.GetDof(); l++)
          for (int k = 0; k < el1.GetDof(); k++)
          {
-            mfem::Vector u(dim), v(dim);
+            mfem::Vector u(sdim), v(sdim);
             shape.GetRow(k, u);
             shape.GetRow(l, v);
-	    
-            mfem::Vector curl_u(dim), curl_v(dim);
+
+            mfem::Vector curl_u(cdim), curl_v(cdim);
             curl_shape.GetRow(k, curl_u);
             curl_shape.GetRow(l, curl_v);
 
-            mfem::Vector n_x_curl_u(dim), n_x_curl_v(dim), n_x_u(dim), n_x_v(dim), n_x_u_x_n(dim), n_x_v_x_n(dim);
-            normal.cross3D(curl_u,n_x_curl_u);
-            normal.cross3D(curl_v,n_x_curl_v);
-            normal.cross3D(u,n_x_u);
-            normal.cross3D(v,n_x_v);
+            // Embed into 3D so the 3D curl-curl Nitsche identities apply
+            // verbatim (planar reduction in 2D, identity in 3D).
+            mfem::Vector u3 = embedVec3(u),  v3 = embedVec3(v);
+            mfem::Vector cu3 = embedCurl3(curl_u), cv3 = embedCurl3(curl_v);
 
-            elmat.Elem(l,k) += factor_ * weights[i] * area * (n_x_curl_u * v);
-            elmat.Elem(l,k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
+            mfem::Vector n_x_curl_u(3), n_x_curl_v(3), n_x_u(3), n_x_v(3);
+            n3.cross3D(cu3, n_x_curl_u);
+            n3.cross3D(cv3, n_x_curl_v);
+            n3.cross3D(u3,  n_x_u);
+            n3.cross3D(v3,  n_x_v);
+
+            elmat.Elem(l,k) += factor_ * weights[i] * area * (n_x_curl_u * v3);
+            elmat.Elem(l,k) += factor_ * theta_ * weights[i] * area * (u3 * n_x_curl_v);
             elmat.Elem(l,k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
 
-         } 
+         }
    }
 }
 
@@ -756,38 +803,47 @@ void ND_NitscheLFIntegrator::AssembleRHSElementVect(
       double h = sqrt(area);
       normal *= 1./area;
 
-      mfem::DenseMatrix shape(el.GetDof(), Tr.GetSpaceDim());
-      mfem::DenseMatrix curl_shape(el.GetDof(), 3);
+      const int sdim = Tr.GetSpaceDim();
+      const int cdim = (dim == 3) ? 3 : 1;   // curl: 3-vector (3D) or scalar (2D)
+      mfem::DenseMatrix shape(el.GetDof(), sdim);
+      mfem::DenseMatrix curl_shape(el.GetDof(), cdim);
 
       mfem::ElementTransformation *tr1 = Tr.Elem1;
       el.CalcVShape(*tr1, shape);
       el.CalcPhysCurlShape(*tr1, curl_shape);
 
-      mfem::Vector temp_out(3);
+      mfem::Vector temp_out(sdim);
       Tr.Transform(ip_face,temp_out);
 
-      mfem::Vector u(3);
+      // Prescribed boundary velocity u_D (vector field).
+      mfem::Vector u(Q.GetVDim());
       Q.Eval(u,Tr,ip_face);
+
+      // Embed normal and boundary data into 3D once per quad point.
+      mfem::Vector n3 = embedVec3(normal);
+      mfem::Vector u3 = embedVec3(u);
+      mfem::Vector n_x_u(3);
+      n3.cross3D(u3, n_x_u);
 
       for (int k = 0; k < el.GetDof(); k++)
       {
-         // Extract u and v
-         mfem::Vector v(dim);
+         // Test function v and its curl (scalar in 2D, 3-vector in 3D).
+         mfem::Vector v(sdim);
          shape.GetRow(k, v);
 
-         // Extract curl(u) and curl(v)
-         mfem::Vector curl_v(dim);
+         mfem::Vector curl_v(cdim);
          curl_shape.GetRow(k, curl_v);
 
-         mfem::Vector n_x_curl_v(dim), n_x_v(dim), n_x_u(dim);
-         normal.cross3D(curl_v,n_x_curl_v);
-         normal.cross3D(v,n_x_v);
-         normal.cross3D(u,n_x_u);
+         mfem::Vector v3 = embedVec3(v), cv3 = embedCurl3(curl_v);
 
-         elvect.Elem(k) += factor_ * theta_ * weights[i] * area * (u * n_x_curl_v);
+         mfem::Vector n_x_curl_v(3), n_x_v(3);
+         n3.cross3D(cv3, n_x_curl_v);
+         n3.cross3D(v3,  n_x_v);
+
+         elvect.Elem(k) += factor_ * theta_ * weights[i] * area * (u3 * n_x_curl_v);
          elvect.Elem(k) += factor_ * Cw_/h * weights[i] * area * (n_x_u * n_x_v);
 
-      } 
+      }
    }
 
 
